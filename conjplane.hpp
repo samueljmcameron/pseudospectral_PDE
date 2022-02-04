@@ -15,7 +15,7 @@ class ConjPlane
   const int id;
   const MPI_Comm comm;
 
-  const int cNz;
+  const int cNy;
   
   bool equal_flag;
   int divider;
