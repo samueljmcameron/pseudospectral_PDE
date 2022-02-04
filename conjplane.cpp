@@ -106,19 +106,19 @@ ConjPlane::~ConjPlane()
 
 
 
-void ConjPlane::single(TimeStep & timestep,int nx)
+void ConjPlane::single(Integrator & integrator,int nx)
 /* Only to be used when there is only one processor. */
 {
   
-  int cNy = timestep.ft_phi.axis_size(0);
+  int cNy = integrator.ft_phi.axis_size(0);
   
   
   // write line at ny = 0  
   int ny = 0;
   for (int j = 1; j < cNz/2; j++) {
     
-    timestep.update(ny,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
-    timestep.ft_phi(ny,cNz-j,nx) = std::conj(timestep.ft_phi(ny,j,nx));
+    integrator.update(ny,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.ft_phi(ny,cNz-j,nx) = std::conj(integrator.ft_phi(ny,j,nx));
 					     
   }
   
@@ -128,16 +128,16 @@ void ConjPlane::single(TimeStep & timestep,int nx)
     
     for (int j = 1; j < cNz/2; j++) {
       
-      timestep.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
-      timestep.ft_phi(cNy-i,cNz-j,nx) = std::conj(timestep.ft_phi(i,j,nx));
+      integrator.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.ft_phi(cNy-i,cNz-j,nx) = std::conj(integrator.ft_phi(i,j,nx));
       
     }
   }
   // write bottom right square to top left square where possible
   for (int i = cNy/2+1; i < cNy; i++) {
     for (int j = 1; j < cNz/2; j++ ) {
-      timestep.update(i,j,nx);
-      timestep.ft_phi(cNy-i,cNz-j,nx) = std::conj(timestep.ft_phi(i,j,nx));
+      integrator.update(i,j,nx);
+      integrator.ft_phi(cNy-i,cNz-j,nx) = std::conj(integrator.ft_phi(i,j,nx));
     }
   }
   
@@ -148,8 +148,8 @@ void ConjPlane::single(TimeStep & timestep,int nx)
   
   for (int j = 1; j < cNz/2; j++) {
     
-    timestep.update(ny,j,nx);//1.0*(ny+complex_local) + 1i*(1.0*j);
-    timestep.ft_phi(ny,cNz-j,nx) = std::conj(timestep.ft_phi(ny,j,nx));
+    integrator.update(ny,j,nx);//1.0*(ny+complex_local) + 1i*(1.0*j);
+    integrator.ft_phi(ny,cNz-j,nx) = std::conj(integrator.ft_phi(ny,j,nx));
     
   }
   
@@ -157,11 +157,11 @@ void ConjPlane::single(TimeStep & timestep,int nx)
   
 }
 
-void ConjPlane::line_single(TimeStep & timestep,int nx)
+void ConjPlane::line_single(Integrator & integrator,int nx)
 /* Only to be used when there is only one processor. */
 {
 
-  int cNy = timestep.ft_phi.axis_size(0);
+  int cNy = integrator.ft_phi.axis_size(0);
 
 
 
@@ -169,16 +169,16 @@ void ConjPlane::line_single(TimeStep & timestep,int nx)
   int nz = 0;
   // write bottom left square to bottom right square where possible
   for (int i = 1; i < cNy/2; i++) {
-    timestep.update(i,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
-    timestep.ft_phi(cNy-i,nz,nx) = std::conj(timestep.ft_phi(i,nz,nx));
+    integrator.update(i,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.ft_phi(cNy-i,nz,nx) = std::conj(integrator.ft_phi(i,nz,nx));
       
   }
   nz = cNz/2;
   
   // write top right square to top left square where possible
   for (int i = cNy/2+1; i < cNy; i++) {
-    timestep.update(i,nz,nx);
-    timestep.ft_phi(cNy-i,nz,nx) = std::conj(timestep.ft_phi(i,nz,nx));
+    integrator.update(i,nz,nx);
+    integrator.ft_phi(cNy-i,nz,nx) = std::conj(integrator.ft_phi(i,nz,nx));
   }
 
   return;
@@ -188,20 +188,20 @@ void ConjPlane::line_single(TimeStep & timestep,int nx)
   
 
 
-void ConjPlane::first(TimeStep & timestep,int nx)
+void ConjPlane::first(Integrator & integrator,int nx)
 /* only to be used when all processors have same
    number of data points on them. */
 {
   
-  int cNy = timestep.ft_phi.axis_size(0);
+  int cNy = integrator.ft_phi.axis_size(0);
 
   // write the line at ny = 0;
 
   int ny = 0;
   for (int j = 1; j < cNz/2; j++) {
     
-    timestep.update(ny,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
-    timestep.ft_phi(ny,cNz-j,nx) = std::conj(timestep.ft_phi(ny,j,nx));
+    integrator.update(ny,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.ft_phi(ny,cNz-j,nx) = std::conj(integrator.ft_phi(ny,j,nx));
 					     
   }
   
@@ -211,11 +211,11 @@ void ConjPlane::first(TimeStep & timestep,int nx)
 
     for (int j = 1; j < cNz/2; j++) {
 
-      timestep.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
       
       
-      block1(block1.axis_size(0)-i,block1.axis_size(1)-j) = std::conj(timestep.ft_phi(i,j,nx));
+      block1(block1.axis_size(0)-i,block1.axis_size(1)-j) = std::conj(integrator.ft_phi(i,j,nx));
       
     }
   }
@@ -230,7 +230,7 @@ void ConjPlane::first(TimeStep & timestep,int nx)
   for (int i = 1; i < cNy; i++) {
     for (int j = cNz/2+1; j < cNz; j++) {
       
-      timestep.ft_phi(i,j,nx) = block3(i-1,j-block3.axis_size(1));
+      integrator.ft_phi(i,j,nx) = block3(i-1,j-block3.axis_size(1));
       
       
     }
@@ -243,13 +243,13 @@ void ConjPlane::first(TimeStep & timestep,int nx)
 
 }
 
-void ConjPlane::last(TimeStep & timestep,int nx)
+void ConjPlane::last(Integrator & integrator,int nx)
 /* only to be used when the last processor has
    less data points than the rest. */
 
 {
   
-  int cNy = timestep.ft_phi.axis_size(0);
+  int cNy = integrator.ft_phi.axis_size(0);
 
   
   // send from far right corner of bottom right square
@@ -258,11 +258,11 @@ void ConjPlane::last(TimeStep & timestep,int nx)
     for (int j = 1; j < cNz/2; j++) {
       
       
-      timestep.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
       
       
-      block2(block2.axis_size(0)-i-1,block2.axis_size(1)-j) = std::conj(timestep.ft_phi(i,j,nx));
+      block2(block2.axis_size(0)-i-1,block2.axis_size(1)-j) = std::conj(integrator.ft_phi(i,j,nx));
       
     }
   }
@@ -277,7 +277,7 @@ void ConjPlane::last(TimeStep & timestep,int nx)
   for (int i = 0; i < block0.axis_size(0); i++) {
     for (int j = cNz/2+1; j < cNz; j++) {
       
-      timestep.ft_phi(i,j,nx) = block0(i,j-block0.axis_size(1));
+      integrator.ft_phi(i,j,nx) = block0(i,j-block0.axis_size(1));
       
       
     }
@@ -291,62 +291,62 @@ void ConjPlane::last(TimeStep & timestep,int nx)
 }
 
 
-void ConjPlane::lefthalf(TimeStep & timestep,int nx)
+void ConjPlane::lefthalf(Integrator & integrator,int nx)
 {
   if (equal_flag)
-    lefthalf_equal(timestep,nx);
+    lefthalf_equal(integrator,nx);
   else
-    lefthalf_unequal(timestep,nx);
+    lefthalf_unequal(integrator,nx);
   return;
 }
 
-void ConjPlane::righthalf(TimeStep & timestep,int nx)
+void ConjPlane::righthalf(Integrator & integrator,int nx)
 {
   if (equal_flag)
-    righthalf_equal(timestep,nx);
+    righthalf_equal(integrator,nx);
   else
-    righthalf_unequal(timestep,nx);
-  return;
-}
-
-
-void ConjPlane::middle_odd(TimeStep & timestep,int nx)
-{
-  if (equal_flag)
-    middle_odd_equal(timestep,nx);
-  else
-    middle_odd_unequal(timestep,nx);
-  return;
-}
-
-void ConjPlane::middle_even(TimeStep & timestep,int nx)
-{
-  if (equal_flag)
-    middle_even_equal(timestep,nx);
-  else
-    middle_even_unequal(timestep,nx);
+    righthalf_unequal(integrator,nx);
   return;
 }
 
 
-void ConjPlane::line_first(TimeStep &timestep, int nx)
+void ConjPlane::middle_odd(Integrator & integrator,int nx)
+{
+  if (equal_flag)
+    middle_odd_equal(integrator,nx);
+  else
+    middle_odd_unequal(integrator,nx);
+  return;
+}
+
+void ConjPlane::middle_even(Integrator & integrator,int nx)
+{
+  if (equal_flag)
+    middle_even_equal(integrator,nx);
+  else
+    middle_even_unequal(integrator,nx);
+  return;
+}
+
+
+void ConjPlane::line_first(Integrator &integrator, int nx)
 /* only to be used when all processors have same
    number of data points on them. */
 
 {
   
-  int cNy = timestep.ft_phi.axis_size(0);
+  int cNy = integrator.ft_phi.axis_size(0);
   int nz = 0;
   
   // send from far left corner of bottom left square
   for (int i = 1; i < cNy; i++) {
 
     
-    timestep.update(i,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.update(i,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
     //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
       
       
-    line1(line1.axis_size(0)-i,0) = std::conj(timestep.ft_phi(i,nz,nx));
+    line1(line1.axis_size(0)-i,0) = std::conj(integrator.ft_phi(i,nz,nx));
       
     
   }
@@ -360,7 +360,7 @@ void ConjPlane::line_first(TimeStep &timestep, int nx)
   
   nz = cNz/2;
   for (int i = 1; i < cNy; i++) {
-    timestep.ft_phi(i,nz,nx) = line3(i-1,0);
+    integrator.ft_phi(i,nz,nx) = line3(i-1,0);
   }
   
   
@@ -371,21 +371,21 @@ void ConjPlane::line_first(TimeStep &timestep, int nx)
 }
 
 
-void ConjPlane::line_last(TimeStep & timestep,int nx)
+void ConjPlane::line_last(Integrator & integrator,int nx)
 /* only to be used when the last processor has
    less data points than the rest. */
   
 {
   
-  int cNy = timestep.ft_phi.axis_size(0);
+  int cNy = integrator.ft_phi.axis_size(0);
   int nz = cNz/2;
   
   // send from far right corner of bottom right square
   for (int i = 0; i < line2.axis_size(0); i++) {
-    timestep.update(i,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.update(i,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
     //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
 
-    line2(line2.axis_size(0)-i-1,0) = std::conj(timestep.ft_phi(i,nz,nx));
+    line2(line2.axis_size(0)-i-1,0) = std::conj(integrator.ft_phi(i,nz,nx));
 
   }
   
@@ -399,7 +399,7 @@ void ConjPlane::line_last(TimeStep & timestep,int nx)
   nz = 0;
   for (int i = 0; i < line0.axis_size(0); i++) {
     
-    timestep.ft_phi(i,nz,nx) = line0(i,0);
+    integrator.ft_phi(i,nz,nx) = line0(i,0);
 
   }
   
@@ -410,44 +410,42 @@ void ConjPlane::line_last(TimeStep & timestep,int nx)
 }
 
 
-void ConjPlane::line_lefthalf(TimeStep & timestep,int nx)
+void ConjPlane::line_lefthalf(Integrator & integrator,int nx)
 {
   if (equal_flag)
-    line_lefthalf_equal(timestep,nx);
+    line_lefthalf_equal(integrator,nx);
   else
-    line_lefthalf_unequal(timestep,nx);
+    line_lefthalf_unequal(integrator,nx);
   return;
 }
 
-void ConjPlane::line_righthalf(TimeStep & timestep,int nx)
+void ConjPlane::line_righthalf(Integrator & integrator,int nx)
 {
   if (equal_flag)
-    line_righthalf_equal(timestep,nx);
+    line_righthalf_equal(integrator,nx);
   else
-    line_righthalf_unequal(timestep,nx);
-  return;
-}
-
-
-void ConjPlane::line_middle_odd(TimeStep & timestep,int nx)
-{
-  if (equal_flag)
-    line_middle_odd_equal(timestep,nx);
-  else
-    line_middle_odd_unequal(timestep,nx);
-  return;
-}
-
-void ConjPlane::line_middle_even(TimeStep & timestep,int nx)
-{
-  if (equal_flag)
-    line_middle_even_equal(timestep,nx);
-  else
-    line_middle_even_unequal(timestep,nx);
+    line_righthalf_unequal(integrator,nx);
   return;
 }
 
 
+void ConjPlane::line_middle_odd(Integrator & integrator,int nx)
+{
+  if (equal_flag)
+    line_middle_odd_equal(integrator,nx);
+  else
+    line_middle_odd_unequal(integrator,nx);
+  return;
+}
+
+void ConjPlane::line_middle_even(Integrator & integrator,int nx)
+{
+  if (equal_flag)
+    line_middle_even_equal(integrator,nx);
+  else
+    line_middle_even_unequal(integrator,nx);
+  return;
+}
 
 
 
@@ -463,12 +461,14 @@ void ConjPlane::line_middle_even(TimeStep & timestep,int nx)
 
 
 
-void ConjPlane::lefthalf_equal(TimeStep & timestep,int nx)
+
+
+void ConjPlane::lefthalf_equal(Integrator & integrator,int nx)
 /* only to be used when all processors have same
    number of data points on them. */
 {
 
-  int cNy = timestep.ft_phi.axis_size(0);
+  int cNy = integrator.ft_phi.axis_size(0);
 
   
   // single line at start of bottom left plane square
@@ -476,10 +476,10 @@ void ConjPlane::lefthalf_equal(TimeStep & timestep,int nx)
   int ny = 0;
   for (int j = 1; j < cNz/2; j++) {
     
-    timestep.update(ny,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.update(ny,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
     //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
     
-    block0(ny,block0.axis_size(1)-j) = std::conj(timestep.ft_phi(ny,j,nx));
+    block0(ny,block0.axis_size(1)-j) = std::conj(integrator.ft_phi(ny,j,nx));
     
   }
   
@@ -492,9 +492,9 @@ void ConjPlane::lefthalf_equal(TimeStep & timestep,int nx)
     
     for (int j = 1; j < cNz/2; j++ ) {
       
-      timestep.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       block1(block1.axis_size(0)-i,block1.axis_size(1)-j)
-	= std::conj(timestep.ft_phi(i,j,nx));
+	= std::conj(integrator.ft_phi(i,j,nx));
       
     }
   }
@@ -533,7 +533,7 @@ void ConjPlane::lefthalf_equal(TimeStep & timestep,int nx)
 
     for (int j = cNz/2+1; j < cNz; j++) {
 	
-	timestep.ft_phi(ny,j,nx) = block2(ny,j-block2.axis_size(1));
+	integrator.ft_phi(ny,j,nx) = block2(ny,j-block2.axis_size(1));
 	
     }
     
@@ -542,7 +542,7 @@ void ConjPlane::lefthalf_equal(TimeStep & timestep,int nx)
     for (int i = 1; i < cNy; i++) {
       for (int j = cNz/2+1; j < cNz; j++) {
 	
-	timestep.ft_phi(i,j,nx) = block3(i-1,j-block3.axis_size(1));
+	integrator.ft_phi(i,j,nx) = block3(i-1,j-block3.axis_size(1));
 	
       }
     }
@@ -551,7 +551,7 @@ void ConjPlane::lefthalf_equal(TimeStep & timestep,int nx)
     for (int i = 1; i < cNy; i++) {
       for (int j = cNz/2+1; j < cNz; j++) {
 	
-	timestep.ft_phi(i,j,nx) = block3(i-1,j-block3.axis_size(1));
+	integrator.ft_phi(i,j,nx) = block3(i-1,j-block3.axis_size(1));
 	
       }
     }
@@ -562,7 +562,7 @@ void ConjPlane::lefthalf_equal(TimeStep & timestep,int nx)
     
     for (int j = cNz/2+1; j < cNz; j++) {
       
-      timestep.ft_phi(ny,j,nx) = block2(ny,j-block2.axis_size(1));
+      integrator.ft_phi(ny,j,nx) = block2(ny,j-block2.axis_size(1));
       
     }
 
@@ -575,12 +575,12 @@ void ConjPlane::lefthalf_equal(TimeStep & timestep,int nx)
 }
 
 
-void ConjPlane::righthalf_equal(TimeStep & timestep,int nx)
+void ConjPlane::righthalf_equal(Integrator & integrator,int nx)
 /* only to be used when all processors have same
    number of data points on them. */
 {
 
-  int cNy = timestep.ft_phi.axis_size(0);
+  int cNy = integrator.ft_phi.axis_size(0);
 
   
   // send from far right corner of bottom right square
@@ -590,11 +590,11 @@ void ConjPlane::righthalf_equal(TimeStep & timestep,int nx)
   for (int j = 1; j < cNz/2; j++) {
       
     
-    timestep.update(ny,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.update(ny,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
     
     
-    block2(0,block2.axis_size(1)-j) = std::conj(timestep.ft_phi(ny,j,nx));
+    block2(0,block2.axis_size(1)-j) = std::conj(integrator.ft_phi(ny,j,nx));
     
   }
 
@@ -606,10 +606,10 @@ void ConjPlane::righthalf_equal(TimeStep & timestep,int nx)
   for (int i = 1; i < cNy; i++) {
     for (int j = 1; j < cNz/2; j++) {
       
-      timestep.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       
       block3(block3.axis_size(0)-i,block3.axis_size(1)-j)
-	= std::conj(timestep.ft_phi(i,j,nx));
+	= std::conj(integrator.ft_phi(i,j,nx));
     }
     
   }
@@ -644,7 +644,7 @@ void ConjPlane::righthalf_equal(TimeStep & timestep,int nx)
     
     for (int j = cNz/2+1; j < cNz; j++) {
       
-      timestep.ft_phi(ny,j,nx) = block0(ny,j-block0.axis_size(1));
+      integrator.ft_phi(ny,j,nx) = block0(ny,j-block0.axis_size(1));
       
     }
     
@@ -654,7 +654,7 @@ void ConjPlane::righthalf_equal(TimeStep & timestep,int nx)
     for (int i = 1; i < cNy; i++) {
       for (int j = cNz/2+1; j < cNz; j++) {
 	
-	timestep.ft_phi(i,j,nx) = block1(i-1,j-block1.axis_size(1));
+	integrator.ft_phi(i,j,nx) = block1(i-1,j-block1.axis_size(1));
 	
       }
     }
@@ -665,7 +665,7 @@ void ConjPlane::righthalf_equal(TimeStep & timestep,int nx)
     for (int i = 1; i < cNy; i++) {
       for (int j = cNz/2+1; j < cNz; j++) {
 	
-	timestep.ft_phi(i,j,nx) = block1(i-1,j-block1.axis_size(1));
+	integrator.ft_phi(i,j,nx) = block1(i-1,j-block1.axis_size(1));
 	
       }
     }
@@ -675,7 +675,7 @@ void ConjPlane::righthalf_equal(TimeStep & timestep,int nx)
 
     for (int j = cNz/2+1; j < cNz; j++) {
       
-      timestep.ft_phi(ny,j,nx) = block0(ny,j-block0.axis_size(1));
+      integrator.ft_phi(ny,j,nx) = block0(ny,j-block0.axis_size(1));
       
     }
     
@@ -691,12 +691,12 @@ void ConjPlane::righthalf_equal(TimeStep & timestep,int nx)
   
 
 
-void ConjPlane::middle_odd_equal(TimeStep & timestep,int nx)
+void ConjPlane::middle_odd_equal(Integrator & integrator,int nx)
 /* only to be used when all processors have same
    number of data points on them. */
 {
 
-  int cNy = timestep.ft_phi.axis_size(0);
+  int cNy = integrator.ft_phi.axis_size(0);
 
 
 
@@ -705,10 +705,10 @@ void ConjPlane::middle_odd_equal(TimeStep & timestep,int nx)
   int ny = 0;
   for (int j = 1; j < cNz/2; j++) {
     
-    timestep.update(ny,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.update(ny,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
     //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
     
-    block0(ny,block0.axis_size(1)-j) = std::conj(timestep.ft_phi(ny,j,nx));
+    block0(ny,block0.axis_size(1)-j) = std::conj(integrator.ft_phi(ny,j,nx));
     
   }
   
@@ -725,7 +725,7 @@ void ConjPlane::middle_odd_equal(TimeStep & timestep,int nx)
 
   for (int j = cNz/2+1; j < cNz; j++) {
     
-    timestep.ft_phi(ny,j,nx) = block2(ny,j-block2.axis_size(1));
+    integrator.ft_phi(ny,j,nx) = block2(ny,j-block2.axis_size(1));
     
   }
 
@@ -737,16 +737,16 @@ void ConjPlane::middle_odd_equal(TimeStep & timestep,int nx)
     for (int j = 1; j < cNz/2; j++) {
       
       
-      timestep.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
-      timestep.ft_phi(cNy-i,cNz-j,nx) = std::conj(timestep.ft_phi(i,j,nx));
+      integrator.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.ft_phi(cNy-i,cNz-j,nx) = std::conj(integrator.ft_phi(i,j,nx));
       
     }
   }
   // write bottom right square to top left square where possible
   for (int i = (block1.axis_size(0)-1)/2 + 2; i < cNy; i++) {
     for (int j = 1; j < cNz/2; j++ ) {
-      timestep.update(i,j,nx);
-      timestep.ft_phi(cNy-i,cNz-j,nx) = std::conj(timestep.ft_phi(i,j,nx));
+      integrator.update(i,j,nx);
+      integrator.ft_phi(cNy-i,cNz-j,nx) = std::conj(integrator.ft_phi(i,j,nx));
     }
   }
 
@@ -757,8 +757,8 @@ void ConjPlane::middle_odd_equal(TimeStep & timestep,int nx)
   
   for (int j = 1; j < cNz/2; j++) {
     
-    timestep.update(ny,j,nx);//1.0*(ny+complex_local) + 1i*(1.0*j);
-    timestep.ft_phi(ny,cNz-j,nx) = std::conj(timestep.ft_phi(ny,j,nx));
+    integrator.update(ny,j,nx);//1.0*(ny+complex_local) + 1i*(1.0*j);
+    integrator.ft_phi(ny,cNz-j,nx) = std::conj(integrator.ft_phi(ny,j,nx));
     
   }
 
@@ -769,7 +769,7 @@ void ConjPlane::middle_odd_equal(TimeStep & timestep,int nx)
 }
 
 
-void ConjPlane::middle_even_equal(TimeStep & timestep,int nx)
+void ConjPlane::middle_even_equal(Integrator & integrator,int nx)
 /* only to be used when all processors have same
    number of data points on them. */
 {
@@ -783,22 +783,22 @@ void ConjPlane::middle_even_equal(TimeStep & timestep,int nx)
   
   for (int j = 1; j < cNz/2; j++) {
     
-    timestep.update(ny,j,nx);//1.0*(ny+complex_local) + 1i*(1.0*j);
-    timestep.ft_phi(ny,cNz-j,nx) = std::conj(timestep.ft_phi(ny,j,nx));
+    integrator.update(ny,j,nx);//1.0*(ny+complex_local) + 1i*(1.0*j);
+    integrator.ft_phi(ny,cNz-j,nx) = std::conj(integrator.ft_phi(ny,j,nx));
     
   }
 
-  int cNy = timestep.ft_phi.axis_size(0);
+  int cNy = integrator.ft_phi.axis_size(0);
 
   // fill and send bottom right square  
     
   for (int i = 1; i < cNy; i++) {
     for (int j = 1; j < cNz/2; j++) {
       
-      timestep.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       
       block3(block3.axis_size(0)-i,block3.axis_size(1)-j)
-	= std::conj(timestep.ft_phi(i,j,nx));
+	= std::conj(integrator.ft_phi(i,j,nx));
     }
     
   }
@@ -817,7 +817,7 @@ void ConjPlane::middle_even_equal(TimeStep & timestep,int nx)
   for (int i = 1; i < cNy; i++) {
     for (int j = cNz/2+1; j < cNz; j++) {
       
-      timestep.ft_phi(i,j,nx) = block1(i-1,j-block1.axis_size(1));
+      integrator.ft_phi(i,j,nx) = block1(i-1,j-block1.axis_size(1));
       
     }
   }
@@ -830,12 +830,12 @@ void ConjPlane::middle_even_equal(TimeStep & timestep,int nx)
 
 
 
-void ConjPlane::lefthalf_unequal(TimeStep & timestep,int nx)
+void ConjPlane::lefthalf_unequal(Integrator & integrator,int nx)
 /* only to be used when the last processor has
    less data points than the rest. */
 {
 
-  int cNy = timestep.ft_phi.axis_size(0);
+  int cNy = integrator.ft_phi.axis_size(0);
 
   if (id == 0) {
     // write the line at ny = 0;
@@ -843,8 +843,8 @@ void ConjPlane::lefthalf_unequal(TimeStep & timestep,int nx)
     int ny = 0;
     for (int j = 1; j < cNz/2; j++) {
     
-      timestep.update(ny,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
-      timestep.ft_phi(ny,cNz-j,nx) = std::conj(timestep.ft_phi(ny,j,nx));
+      integrator.update(ny,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.ft_phi(ny,cNz-j,nx) = std::conj(integrator.ft_phi(ny,j,nx));
       
     }
   }
@@ -858,10 +858,10 @@ void ConjPlane::lefthalf_unequal(TimeStep & timestep,int nx)
     for (int j = 1; j < cNz/2; j++) {
       
       
-      timestep.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
 
-      block0(block0.axis_size(0)-i-(1-loopstart),block0.axis_size(1)-j) = std::conj(timestep.ft_phi(i,j,nx));
+      block0(block0.axis_size(0)-i-(1-loopstart),block0.axis_size(1)-j) = std::conj(integrator.ft_phi(i,j,nx));
       
     }
 
@@ -874,9 +874,9 @@ void ConjPlane::lefthalf_unequal(TimeStep & timestep,int nx)
     
     for (int j = 1; j < cNz/2; j++ ) {
       
-      timestep.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       block1(block1.axis_size(0)-(i-block0.axis_size(0)+1-loopstart),block1.axis_size(1)-j)
-	= std::conj(timestep.ft_phi(i,j,nx));
+	= std::conj(integrator.ft_phi(i,j,nx));
       
     }
   }
@@ -915,7 +915,7 @@ void ConjPlane::lefthalf_unequal(TimeStep & timestep,int nx)
     for (int i = loopstart; i < block2.axis_size(0)+loopstart; i++) {
       for (int j = cNz/2+1; j < cNz; j++) {
 	
-	timestep.ft_phi(i,j,nx) = block2(i-loopstart,j-block2.axis_size(1));
+	integrator.ft_phi(i,j,nx) = block2(i-loopstart,j-block2.axis_size(1));
 	
       }
     }
@@ -925,7 +925,7 @@ void ConjPlane::lefthalf_unequal(TimeStep & timestep,int nx)
     for (int i = block2.axis_size(0)+loopstart; i < cNy; i++) {
       for (int j = cNz/2+1; j < cNz; j++) {
 	
-	timestep.ft_phi(i,j,nx) = block3(i-(block2.axis_size(0)+loopstart),j-block3.axis_size(1));
+	integrator.ft_phi(i,j,nx) = block3(i-(block2.axis_size(0)+loopstart),j-block3.axis_size(1));
 	
       }
     }
@@ -934,7 +934,7 @@ void ConjPlane::lefthalf_unequal(TimeStep & timestep,int nx)
     for (int i = block2.axis_size(0)+loopstart; i < cNy; i++) {
       for (int j = cNz/2+1; j < cNz; j++) {
 	
-	timestep.ft_phi(i,j,nx) = block3(i-(block2.axis_size(0)+loopstart),j-block3.axis_size(1));
+	integrator.ft_phi(i,j,nx) = block3(i-(block2.axis_size(0)+loopstart),j-block3.axis_size(1));
 	
       }
     }
@@ -945,7 +945,7 @@ void ConjPlane::lefthalf_unequal(TimeStep & timestep,int nx)
     for (int i = loopstart; i < block2.axis_size(0)+loopstart; i++) {
       for (int j = cNz/2+1; j < cNz; j++) {
 	
-	timestep.ft_phi(i,j,nx) = block2(i-loopstart,j-block2.axis_size(1));
+	integrator.ft_phi(i,j,nx) = block2(i-loopstart,j-block2.axis_size(1));
 	
       }
     }      
@@ -958,13 +958,13 @@ void ConjPlane::lefthalf_unequal(TimeStep & timestep,int nx)
 }
 
 
-void ConjPlane::righthalf_unequal(TimeStep & timestep,int nx)
+void ConjPlane::righthalf_unequal(Integrator & integrator,int nx)
 /* only to be used when the last processor has
    less data points than the rest. */
 
 {
 
-  int cNy = timestep.ft_phi.axis_size(0);
+  int cNy = integrator.ft_phi.axis_size(0);
 
   
   // send from far right corner of bottom right square
@@ -974,11 +974,11 @@ void ConjPlane::righthalf_unequal(TimeStep & timestep,int nx)
     for (int j = 1; j < cNz/2; j++) {
       
       
-      timestep.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
       
       
-      block2(block2.axis_size(0)-i-1,block2.axis_size(1)-j) = std::conj(timestep.ft_phi(i,j,nx));
+      block2(block2.axis_size(0)-i-1,block2.axis_size(1)-j) = std::conj(integrator.ft_phi(i,j,nx));
       
     }
   }
@@ -990,10 +990,10 @@ void ConjPlane::righthalf_unequal(TimeStep & timestep,int nx)
   for (int i = block2.axis_size(0); i < cNy; i++) {
     for (int j = 1; j < cNz/2; j++) {
       
-      timestep.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       
       block3(block3.axis_size(0)-(i-block2.axis_size(0)+1),block3.axis_size(1)-j)
-	= std::conj(timestep.ft_phi(i,j,nx));
+	= std::conj(integrator.ft_phi(i,j,nx));
     }
     
   }
@@ -1028,7 +1028,7 @@ void ConjPlane::righthalf_unequal(TimeStep & timestep,int nx)
     for (int i = 0; i < block0.axis_size(0); i++) {
       for (int j = cNz/2+1; j < cNz; j++) {
 	
-	timestep.ft_phi(i,j,nx) = block0(i,j-block0.axis_size(1));
+	integrator.ft_phi(i,j,nx) = block0(i,j-block0.axis_size(1));
 	
       }
     }
@@ -1038,7 +1038,7 @@ void ConjPlane::righthalf_unequal(TimeStep & timestep,int nx)
     for (int i = block0.axis_size(0); i < cNy; i++) {
       for (int j = cNz/2+1; j < cNz; j++) {
 	
-	timestep.ft_phi(i,j,nx) = block1(i-block0.axis_size(0),j-block1.axis_size(1));
+	integrator.ft_phi(i,j,nx) = block1(i-block0.axis_size(0),j-block1.axis_size(1));
 	
       }
     }
@@ -1049,7 +1049,7 @@ void ConjPlane::righthalf_unequal(TimeStep & timestep,int nx)
     for (int i = block0.axis_size(0); i < cNy; i++) {
       for (int j = cNz/2+1; j < cNz; j++) {
 	
-	timestep.ft_phi(i,j,nx) = block1(i-block0.axis_size(0),j-block1.axis_size(1));
+	integrator.ft_phi(i,j,nx) = block1(i-block0.axis_size(0),j-block1.axis_size(1));
 	
       }
     }
@@ -1059,7 +1059,7 @@ void ConjPlane::righthalf_unequal(TimeStep & timestep,int nx)
     for (int i = 0; i < block0.axis_size(0); i++) {
       for (int j = cNz/2+1; j < cNz; j++) {
 	
-	timestep.ft_phi(i,j,nx) = block0(i,j-block0.axis_size(1));
+	integrator.ft_phi(i,j,nx) = block0(i,j-block0.axis_size(1));
 	
       }
     }      
@@ -1072,13 +1072,13 @@ void ConjPlane::righthalf_unequal(TimeStep & timestep,int nx)
   
 
 
-void ConjPlane::middle_odd_unequal(TimeStep & timestep,int nx)
+void ConjPlane::middle_odd_unequal(Integrator & integrator,int nx)
 /* only to be used when the last processor has
    less data points than the rest. */
 
 {
 
-  int cNy = timestep.ft_phi.axis_size(0);
+  int cNy = integrator.ft_phi.axis_size(0);
 
   
   // write bottom left square to top right square where possible
@@ -1087,8 +1087,8 @@ void ConjPlane::middle_odd_unequal(TimeStep & timestep,int nx)
     for (int j = 1; j < cNz/2; j++) {
       
       
-      timestep.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
-      timestep.ft_phi(cNy-i-block1.axis_size(0)-1,cNz-j,nx) = std::conj(timestep.ft_phi(i,j,nx));
+      integrator.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.ft_phi(cNy-i-block1.axis_size(0)-1,cNz-j,nx) = std::conj(integrator.ft_phi(i,j,nx));
       
     }
     /*
@@ -1096,7 +1096,7 @@ void ConjPlane::middle_odd_unequal(TimeStep & timestep,int nx)
     for (int j = cNz/2 + 1; j < cNz; j++) {
       
       // since conjugatation for top, change expression for ft_phi
-      ft_phi(i,j,nx) = std::conj(timestep.update(ny,Nz-j,nx,ft_phi));//1.0*(Ny-i-complex_local)-1i*(1.0*(Nz-j));
+      ft_phi(i,j,nx) = std::conj(integrator.update(ny,Nz-j,nx,ft_phi));//1.0*(Ny-i-complex_local)-1i*(1.0*(Nz-j));
       ft_phi(cNy-i-block1.axis_size(0)-1,cNz-j,nx) = std::conj(ft_phi(i,j,nx));
       
       }*/
@@ -1104,8 +1104,8 @@ void ConjPlane::middle_odd_unequal(TimeStep & timestep,int nx)
   // write bottom right square to top left square where possible
   for (int i = (block0.axis_size(0)-1)/2 + 1; i < block0.axis_size(0); i++) {
     for (int j = 1; j < cNz/2; j++ ) {
-      timestep.update(i,j,nx);
-      timestep.ft_phi(cNy-i-block1.axis_size(0)-1,cNz-j,nx) = std::conj(timestep.ft_phi(i,j,nx));
+      integrator.update(i,j,nx);
+      integrator.ft_phi(cNy-i-block1.axis_size(0)-1,cNz-j,nx) = std::conj(integrator.ft_phi(i,j,nx));
     }
   }
 
@@ -1116,8 +1116,8 @@ void ConjPlane::middle_odd_unequal(TimeStep & timestep,int nx)
   
   for (int j = 1; j < cNz/2; j++) {
     
-    timestep.update(ny,j,nx);//1.0*(ny+complex_local) + 1i*(1.0*j);
-    timestep.ft_phi(ny,cNz-j,nx) = std::conj(timestep.ft_phi(ny,j,nx));
+    integrator.update(ny,j,nx);//1.0*(ny+complex_local) + 1i*(1.0*j);
+    integrator.ft_phi(ny,cNz-j,nx) = std::conj(integrator.ft_phi(ny,j,nx));
     
   }
   
@@ -1127,8 +1127,8 @@ void ConjPlane::middle_odd_unequal(TimeStep & timestep,int nx)
     
     for (int j = 1; j < cNz/2; j++) {
       
-      timestep.update(i,j,nx);//1.0*(i+complex_local) + 1i*(1.0*j);
-      block3(cNy-i-1,block3.axis_size(1)-j) = std::conj(timestep.ft_phi(i,j,nx));
+      integrator.update(i,j,nx);//1.0*(i+complex_local) + 1i*(1.0*j);
+      block3(cNy-i-1,block3.axis_size(1)-j) = std::conj(integrator.ft_phi(i,j,nx));
     }
     
   }
@@ -1144,7 +1144,7 @@ void ConjPlane::middle_odd_unequal(TimeStep & timestep,int nx)
   for (int i = cNy-block1.axis_size(0); i < cNy; i++) {
     
     for (int j = cNz/2+1; j < cNz; j++) {
-      timestep.ft_phi(i,j,nx) = block1(i-(cNy-block1.axis_size(0)),j-block1.axis_size(1));
+      integrator.ft_phi(i,j,nx) = block1(i-(cNy-block1.axis_size(0)),j-block1.axis_size(1));
     }
   }
   
@@ -1156,13 +1156,13 @@ void ConjPlane::middle_odd_unequal(TimeStep & timestep,int nx)
 }
 
 
-void ConjPlane::middle_even_unequal(TimeStep & timestep,int nx)
+void ConjPlane::middle_even_unequal(Integrator & integrator,int nx)
 /* only to be used when the last processor has
    less data points than the rest. */
 
 {
 
-  int cNy = timestep.ft_phi.axis_size(0);
+  int cNy = integrator.ft_phi.axis_size(0);
 
 
 
@@ -1173,10 +1173,10 @@ void ConjPlane::middle_even_unequal(TimeStep & timestep,int nx)
     for (int j = 1; j < cNz/2; j++) {
       
       
-      timestep.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
 
-      block0(block0.axis_size(0)-i-1,block0.axis_size(1)-j) = std::conj(timestep.ft_phi(i,j,nx));
+      block0(block0.axis_size(0)-i-1,block0.axis_size(1)-j) = std::conj(integrator.ft_phi(i,j,nx));
       
     }
 
@@ -1190,8 +1190,8 @@ void ConjPlane::middle_even_unequal(TimeStep & timestep,int nx)
 
     for (int j = 1; j < cNz/2; j++) {
 
-      timestep.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
-      timestep.ft_phi(cNy-(i-block0.axis_size(0))-1,cNz-j,nx) = std::conj(timestep.ft_phi(i,j,nx));
+      integrator.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.ft_phi(cNy-(i-block0.axis_size(0))-1,cNz-j,nx) = std::conj(integrator.ft_phi(i,j,nx));
 
     }
   }
@@ -1199,8 +1199,8 @@ void ConjPlane::middle_even_unequal(TimeStep & timestep,int nx)
   // write bottom right to top left in the same processor where possible
   for (int i = block0.axis_size(0)+(block1.axis_size(0)-1)/2+1; i < cNy; i++) {
     for (int j = 1; j < cNz/2; j++ ) {
-      timestep.update(i,j,nx);
-      timestep.ft_phi(cNy-(i-block0.axis_size(0))-1,cNz-j,nx) = std::conj(timestep.ft_phi(i,j,nx));
+      integrator.update(i,j,nx);
+      integrator.ft_phi(cNy-(i-block0.axis_size(0))-1,cNz-j,nx) = std::conj(integrator.ft_phi(i,j,nx));
     }
   }
   
@@ -1210,8 +1210,8 @@ void ConjPlane::middle_even_unequal(TimeStep & timestep,int nx)
   
   for (int j = 1; j < cNz/2; j++) {
     
-    timestep.update(ny,j,nx);//1.0*(ny+complex_local) + 1i*(1.0*j);
-    timestep.ft_phi(ny,cNz-j,nx) = std::conj(timestep.ft_phi(ny,j,nx));
+    integrator.update(ny,j,nx);//1.0*(ny+complex_local) + 1i*(1.0*j);
+    integrator.ft_phi(ny,cNz-j,nx) = std::conj(integrator.ft_phi(ny,j,nx));
     
   }
   
@@ -1224,9 +1224,9 @@ void ConjPlane::middle_even_unequal(TimeStep & timestep,int nx)
   for (int i = 0; i < block2.axis_size(0); i++) {
     
     for (int j = cNz/2+1; j < cNz; j++) {
-      timestep.ft_phi(i,j,nx) = block2(i,j-block2.axis_size(1));
-      //      std::cout << "ft_phi(" << i+timestep.ft_phi.get_local0start() << "," << j
-      //		<< ") = " << timestep.ft_phi(i,j,nx) << std::endl;
+      integrator.ft_phi(i,j,nx) = block2(i,j-block2.axis_size(1));
+      //      std::cout << "ft_phi(" << i+integrator.ft_phi.get_local0start() << "," << j
+      //		<< ") = " << integrator.ft_phi(i,j,nx) << std::endl;
     }
   }
   
@@ -1240,19 +1240,19 @@ void ConjPlane::middle_even_unequal(TimeStep & timestep,int nx)
 
 
 
-void ConjPlane::line_lefthalf_equal(TimeStep & timestep,int nx)
+void ConjPlane::line_lefthalf_equal(Integrator & integrator,int nx)
 {
 
-  int cNy = timestep.ft_phi.axis_size(0);
+  int cNy = integrator.ft_phi.axis_size(0);
 
 
   int ny = 0;
   int nz = 0;
     
-  timestep.update(ny,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+  integrator.update(ny,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
   //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
     
-  line0(0,0) = std::conj(timestep.ft_phi(ny,nz,nx));
+  line0(0,0) = std::conj(integrator.ft_phi(ny,nz,nx));
 
 
   
@@ -1261,9 +1261,9 @@ void ConjPlane::line_lefthalf_equal(TimeStep & timestep,int nx)
   
   for (int i = 1; i < cNy ; i++) {
     
-    timestep.update(i,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.update(i,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
     line1(line1.axis_size(0)-i,0)
-      = std::conj(timestep.ft_phi(i,nz,nx));
+      = std::conj(integrator.ft_phi(i,nz,nx));
   }
   
   MPI_Isend(line1.data(),line1.size()*2,MPI_DOUBLE,mpi_size-id-1,1,
@@ -1299,25 +1299,25 @@ void ConjPlane::line_lefthalf_equal(TimeStep & timestep,int nx)
   if (b2flag) { // if line2 is received first
 
 	
-    timestep.ft_phi(ny,nz,nx) = line2(ny,0);
+    integrator.ft_phi(ny,nz,nx) = line2(ny,0);
 
     
     MPI_Wait(&line_requests[3],MPI_STATUS_IGNORE);
     
     for (int i = 1; i < cNy; i++) {
-	timestep.ft_phi(i,nz,nx) = line3(i-1,0);
+	integrator.ft_phi(i,nz,nx) = line3(i-1,0);
     }
 
   } else if (b3flag) { // if line3 is received first
 
     for (int i = 1; i < cNy; i++) {
-      timestep.ft_phi(i,nz,nx) = line3(i-1,0);
+      integrator.ft_phi(i,nz,nx) = line3(i-1,0);
     }
     
     MPI_Wait(&line_requests[2],MPI_STATUS_IGNORE);
 
       
-    timestep.ft_phi(ny,nz,nx) = line2(ny,0);
+    integrator.ft_phi(ny,nz,nx) = line2(ny,0);
   }
   
   MPI_Waitall(nreq-2,line_requests,MPI_STATUSES_IGNORE);    
@@ -1326,20 +1326,20 @@ void ConjPlane::line_lefthalf_equal(TimeStep & timestep,int nx)
 }
 
 
-void ConjPlane::line_righthalf_equal(TimeStep & timestep,int nx)
+void ConjPlane::line_righthalf_equal(Integrator & integrator,int nx)
 {
 
-  int cNy = timestep.ft_phi.axis_size(0);
+  int cNy = integrator.ft_phi.axis_size(0);
   int nz = cNz/2;
 
 
   int ny = 0;
 
-  timestep.update(ny,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+  integrator.update(ny,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
   //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
     
     
-  line2(0,0) = std::conj(timestep.ft_phi(ny,nz,nx));
+  line2(0,0) = std::conj(integrator.ft_phi(ny,nz,nx));
 
 
 
@@ -1349,10 +1349,10 @@ void ConjPlane::line_righthalf_equal(TimeStep & timestep,int nx)
     
   for (int i = 1; i < cNy; i++) {
     
-    timestep.update(i,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.update(i,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       
     line3(line3.axis_size(0)-i,0)
-      = std::conj(timestep.ft_phi(i,nz,nx));
+      = std::conj(integrator.ft_phi(i,nz,nx));
   }
   
   
@@ -1385,20 +1385,20 @@ void ConjPlane::line_righthalf_equal(TimeStep & timestep,int nx)
   
   if (b0flag) { // if line0 is received first
     
-    timestep.ft_phi(ny,nz,nx) = line0(ny,0);
+    integrator.ft_phi(ny,nz,nx) = line0(ny,0);
     
     
     MPI_Wait(&line_requests[1],MPI_STATUS_IGNORE);
     
     for (int i = 1; i < cNy; i++) {
-      timestep.ft_phi(i,nz,nx) = line1(i-1,0);
+      integrator.ft_phi(i,nz,nx) = line1(i-1,0);
     }
     
     
   } else if (b1flag) { // if line1 is received first
     
     for (int i = 1; i < cNy; i++) {
-      timestep.ft_phi(i,nz,nx) = line1(i-1,nz);
+      integrator.ft_phi(i,nz,nx) = line1(i-1,nz);
     }
     
     MPI_Wait(&line_requests[0],MPI_STATUS_IGNORE);
@@ -1406,7 +1406,7 @@ void ConjPlane::line_righthalf_equal(TimeStep & timestep,int nx)
 
 
       
-    timestep.ft_phi(ny,nz,nx) = line0(ny,0);
+    integrator.ft_phi(ny,nz,nx) = line0(ny,0);
   }
   
   MPI_Waitall(nreq-2,&line_requests[2],MPI_STATUSES_IGNORE);
@@ -1416,20 +1416,20 @@ void ConjPlane::line_righthalf_equal(TimeStep & timestep,int nx)
   
 
 
-void ConjPlane::line_middle_odd_equal(TimeStep & timestep,int nx)
+void ConjPlane::line_middle_odd_equal(Integrator & integrator,int nx)
 {
 
-  int cNy = timestep.ft_phi.axis_size(0);
+  int cNy = integrator.ft_phi.axis_size(0);
   int nz = 0;
   int ny = 0;
 
 
   // send one to next processor
 
-  timestep.update(ny,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+  integrator.update(ny,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
   //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
     
-  line0(ny,0) = std::conj(timestep.ft_phi(ny,nz,nx));
+  line0(ny,0) = std::conj(integrator.ft_phi(ny,nz,nx));
 
   MPI_Isend(line0.data(),line0.size()*2,MPI_DOUBLE,mpi_size-id,0,
 	    comm,&line_requests[0]);
@@ -1442,7 +1442,7 @@ void ConjPlane::line_middle_odd_equal(TimeStep & timestep,int nx)
   MPI_Recv(line2.data(), line2.size()*2,MPI_DOUBLE,mpi_size-id,2,
 	   comm,MPI_STATUS_IGNORE);
     
-  timestep.ft_phi(ny,nz,nx) = line2(ny,0);
+  integrator.ft_phi(ny,nz,nx) = line2(ny,0);
 
 
 
@@ -1450,8 +1450,8 @@ void ConjPlane::line_middle_odd_equal(TimeStep & timestep,int nx)
   // write bottom left square to bottom right square where possible
   for (int i = 1; i < (line1.axis_size(0)-1)/2+1; i++) {
   
-    timestep.update(i,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
-    timestep.ft_phi(cNy-i,nz,nx) = std::conj(timestep.ft_phi(i,nz,nx));
+    integrator.update(i,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.ft_phi(cNy-i,nz,nx) = std::conj(integrator.ft_phi(i,nz,nx));
       
   }
 
@@ -1459,8 +1459,8 @@ void ConjPlane::line_middle_odd_equal(TimeStep & timestep,int nx)
   // write top right square to top left square where possible
   for (int i = (line1.axis_size(0)-1)/2 + 2; i < cNy; i++) {
 
-    timestep.update(i,nz,nx);
-    timestep.ft_phi(cNy-i,nz,nx) = std::conj(timestep.ft_phi(i,nz,nx));
+    integrator.update(i,nz,nx);
+    integrator.ft_phi(cNy-i,nz,nx) = std::conj(integrator.ft_phi(i,nz,nx));
 
   }
   MPI_Wait(&line_requests[0],MPI_STATUS_IGNORE);
@@ -1470,7 +1470,7 @@ void ConjPlane::line_middle_odd_equal(TimeStep & timestep,int nx)
 }
 
 
-void ConjPlane::line_middle_even_equal(TimeStep & timestep,int nx)
+void ConjPlane::line_middle_even_equal(Integrator & integrator,int nx)
 /* only to be used when all processors have same
    number of data points on them. */
 {
@@ -1482,15 +1482,15 @@ void ConjPlane::line_middle_even_equal(TimeStep & timestep,int nx)
 
   int nz = cNz/2;
 
-  int cNy = timestep.ft_phi.axis_size(0);
+  int cNy = integrator.ft_phi.axis_size(0);
 
   // fill and send top right square 
     
   for (int i = 1; i < cNy; i++) {
-    timestep.update(i,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.update(i,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       
     line3(line3.axis_size(0)-i,0)
-	= std::conj(timestep.ft_phi(i,nz,nx));
+	= std::conj(integrator.ft_phi(i,nz,nx));
 
   }
   
@@ -1506,7 +1506,7 @@ void ConjPlane::line_middle_even_equal(TimeStep & timestep,int nx)
   
   nz = 0;
   for (int i = 1; i < cNy; i++) {
-    timestep.ft_phi(i,nz,nx) = line1(i-1,0);
+    integrator.ft_phi(i,nz,nx) = line1(i-1,0);
   }
     
   MPI_Wait(&line_requests[3],MPI_STATUS_IGNORE);
@@ -1517,10 +1517,10 @@ void ConjPlane::line_middle_even_equal(TimeStep & timestep,int nx)
 
 
 
-void ConjPlane::line_lefthalf_unequal(TimeStep & timestep,int nx)
+void ConjPlane::line_lefthalf_unequal(Integrator & integrator,int nx)
 {
 
-  int cNy = timestep.ft_phi.axis_size(0);
+  int cNy = integrator.ft_phi.axis_size(0);
 
   int nz = 0;
   
@@ -1528,10 +1528,10 @@ void ConjPlane::line_lefthalf_unequal(TimeStep & timestep,int nx)
   
   for (int i = loopstart; i < line0.axis_size(0)+loopstart; i++) {
 
-    timestep.update(i,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.update(i,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
     //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
 
-    line0(line0.axis_size(0)-i-(1-loopstart),0) = std::conj(timestep.ft_phi(i,nz,nx));
+    line0(line0.axis_size(0)-i-(1-loopstart),0) = std::conj(integrator.ft_phi(i,nz,nx));
       
   }
   
@@ -1540,9 +1540,9 @@ void ConjPlane::line_lefthalf_unequal(TimeStep & timestep,int nx)
   
   for (int i = line0.axis_size(0)+loopstart; i < cNy ; i++) {
 
-    timestep.update(i,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.update(i,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
     line1(line1.axis_size(0)-(i-line0.axis_size(0)+1-loopstart),0)
-      = std::conj(timestep.ft_phi(i,nz,nx));
+      = std::conj(integrator.ft_phi(i,nz,nx));
   }
   
   MPI_Isend(line1.data(),line1.size()*2,MPI_DOUBLE,mpi_size-id-2,1,
@@ -1579,7 +1579,7 @@ void ConjPlane::line_lefthalf_unequal(TimeStep & timestep,int nx)
   
   if (b2flag) { // if line2 is received first
     for (int i = loopstart; i < line2.axis_size(0)+loopstart; i++) {
-      timestep.ft_phi(i,nz,nx) = line2(i-loopstart,0);
+      integrator.ft_phi(i,nz,nx) = line2(i-loopstart,0);
       
     }
 
@@ -1587,19 +1587,19 @@ void ConjPlane::line_lefthalf_unequal(TimeStep & timestep,int nx)
     MPI_Wait(&line_requests[3],MPI_STATUS_IGNORE);
     
     for (int i = line2.axis_size(0)+loopstart; i < cNy; i++) {
-      timestep.ft_phi(i,nz,nx) = line3(i-(line2.axis_size(0)+loopstart),0);
+      integrator.ft_phi(i,nz,nx) = line3(i-(line2.axis_size(0)+loopstart),0);
     }
   } else if (b3flag) { // if line3 is received first
 
     for (int i = line2.axis_size(0)+loopstart; i < cNy; i++) {
-	timestep.ft_phi(i,nz,nx) = line3(i-(line2.axis_size(0)+loopstart),0);
+	integrator.ft_phi(i,nz,nx) = line3(i-(line2.axis_size(0)+loopstart),0);
     }
     
     MPI_Wait(&line_requests[2],MPI_STATUS_IGNORE);
     
     
     for (int i = loopstart; i < line2.axis_size(0)+loopstart; i++) {
-      timestep.ft_phi(i,nz,nx) = line2(i-loopstart,0);
+      integrator.ft_phi(i,nz,nx) = line2(i-loopstart,0);
 	
     }
 
@@ -1612,19 +1612,19 @@ void ConjPlane::line_lefthalf_unequal(TimeStep & timestep,int nx)
 }
 
 
-void ConjPlane::line_righthalf_unequal(TimeStep & timestep,int nx)
+void ConjPlane::line_righthalf_unequal(Integrator & integrator,int nx)
 {
 
-  int cNy = timestep.ft_phi.axis_size(0);
+  int cNy = integrator.ft_phi.axis_size(0);
   int nz = cNz/2;
   
   // write and send top right line (1 <= y < Ny/2, z = cNz/2)
   
   for (int i = 0; i < line2.axis_size(0); i++) {
-    timestep.update(i,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.update(i,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
     //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
 
-    line2(line2.axis_size(0)-i-1,0) = std::conj(timestep.ft_phi(i,nz,nx));
+    line2(line2.axis_size(0)-i-1,0) = std::conj(integrator.ft_phi(i,nz,nx));
     
   }
   
@@ -1634,10 +1634,10 @@ void ConjPlane::line_righthalf_unequal(TimeStep & timestep,int nx)
     
   for (int i = line2.axis_size(0); i < cNy; i++) {
       
-    timestep.update(i,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.update(i,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       
     line3(line3.axis_size(0)-(i-line2.axis_size(0)+1),0)
-      = std::conj(timestep.ft_phi(i,nz,nx));
+      = std::conj(integrator.ft_phi(i,nz,nx));
   }
 
   MPI_Isend(line3.data(),line3.size()*2,MPI_DOUBLE,mpi_size-id-2,3,
@@ -1670,7 +1670,7 @@ void ConjPlane::line_righthalf_unequal(TimeStep & timestep,int nx)
   
   if (b0flag) { // if line0 is received first
     for (int i = 0; i < line0.axis_size(0); i++) {
-      timestep.ft_phi(i,nz,nx) = line0(i,0);
+      integrator.ft_phi(i,nz,nx) = line0(i,0);
 
     }
 
@@ -1678,7 +1678,7 @@ void ConjPlane::line_righthalf_unequal(TimeStep & timestep,int nx)
     
     for (int i = line0.axis_size(0); i < cNy; i++) {
 	
-      timestep.ft_phi(i,nz,nx) = line1(i-line0.axis_size(0),0);
+      integrator.ft_phi(i,nz,nx) = line1(i-line0.axis_size(0),0);
 
     }
     
@@ -1686,14 +1686,14 @@ void ConjPlane::line_righthalf_unequal(TimeStep & timestep,int nx)
   } else if (b1flag) { // if line1 is received first
     
     for (int i = line0.axis_size(0); i < cNy; i++) {
-	timestep.ft_phi(i,nz,nx) = line1(i-line0.axis_size(0),0);
+	integrator.ft_phi(i,nz,nx) = line1(i-line0.axis_size(0),0);
 
     }
     
     MPI_Wait(&line_requests[0],MPI_STATUS_IGNORE);
     
     for (int i = 0; i < line0.axis_size(0); i++) {
-      timestep.ft_phi(i,nz,nx) = line0(i,0);
+      integrator.ft_phi(i,nz,nx) = line0(i,0);
 
     }      
     
@@ -1705,17 +1705,17 @@ void ConjPlane::line_righthalf_unequal(TimeStep & timestep,int nx)
   
 
 
-void ConjPlane::line_middle_odd_unequal(TimeStep & timestep,int nx)
+void ConjPlane::line_middle_odd_unequal(Integrator & integrator,int nx)
 {
 
-  int cNy = timestep.ft_phi.axis_size(0);
+  int cNy = integrator.ft_phi.axis_size(0);
   int nz = 0;
   
   // write bottom left square to bottom right square where possible
   for (int i = 0; i < (line0.axis_size(0)-1)/2; i++) {
     
-    timestep.update(i,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
-    timestep.ft_phi(cNy-i-line1.axis_size(0)-1,nz,nx) = std::conj(timestep.ft_phi(i,nz,nx));
+    integrator.update(i,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.ft_phi(cNy-i-line1.axis_size(0)-1,nz,nx) = std::conj(integrator.ft_phi(i,nz,nx));
       
   }
 
@@ -1723,8 +1723,8 @@ void ConjPlane::line_middle_odd_unequal(TimeStep & timestep,int nx)
 
   nz = cNz/2;
   for (int i = (line0.axis_size(0)-1)/2 + 1; i < line0.axis_size(0); i++) {
-    timestep.update(i,nz,nx);
-    timestep.ft_phi(cNy-i-line1.axis_size(0)-1,nz,nx) = std::conj(timestep.ft_phi(i,nz,nx));
+    integrator.update(i,nz,nx);
+    integrator.ft_phi(cNy-i-line1.axis_size(0)-1,nz,nx) = std::conj(integrator.ft_phi(i,nz,nx));
   }
 
   
@@ -1733,8 +1733,8 @@ void ConjPlane::line_middle_odd_unequal(TimeStep & timestep,int nx)
   nz = cNz/2;
   
   for (int i = cNy-line3.axis_size(0); i < cNy; i++) {
-    timestep.update(i,nz,nx);//1.0*(i+complex_local) + 1i*(1.0*j);
-    line3(cNy-i-1,0) = std::conj(timestep.ft_phi(i,nz,nx));
+    integrator.update(i,nz,nx);//1.0*(i+complex_local) + 1i*(1.0*j);
+    line3(cNy-i-1,0) = std::conj(integrator.ft_phi(i,nz,nx));
   }
   
   MPI_Isend(line3.data(),line3.size()*2,MPI_DOUBLE,mpi_size-id-2,3,
@@ -1747,7 +1747,7 @@ void ConjPlane::line_middle_odd_unequal(TimeStep & timestep,int nx)
 
   nz = 0;
   for (int i = cNy-line1.axis_size(0); i < cNy; i++) {
-    timestep.ft_phi(i,nz,nx) = line1(i-(cNy-line1.axis_size(0)),0);
+    integrator.ft_phi(i,nz,nx) = line1(i-(cNy-line1.axis_size(0)),0);
   }
   
   
@@ -1757,19 +1757,19 @@ void ConjPlane::line_middle_odd_unequal(TimeStep & timestep,int nx)
   
 }
 
-void ConjPlane::line_middle_even_unequal(TimeStep & timestep,int nx)
+void ConjPlane::line_middle_even_unequal(Integrator & integrator,int nx)
 {
 
-  int cNy = timestep.ft_phi.axis_size(0);
+  int cNy = integrator.ft_phi.axis_size(0);
   int nz = 0;
 
   // write bottom left and send to next processor
   for (int i = 0; i < line0.axis_size(0); i++) {
       
-    timestep.update(i,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.update(i,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
 
 
-    line0(line0.axis_size(0)-i-1,0) = std::conj(timestep.ft_phi(i,nz,nx));
+    line0(line0.axis_size(0)-i-1,0) = std::conj(integrator.ft_phi(i,nz,nx));
       
   }
 
@@ -1780,15 +1780,15 @@ void ConjPlane::line_middle_even_unequal(TimeStep & timestep,int nx)
 
   // write bottom left to bottom right in same processor where possible
   for (int i = line0.axis_size(0); i < line0.axis_size(0)+(line1.axis_size(0)-1)/2; i++) {
-    timestep.update(i,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
-    timestep.ft_phi(cNy-(i-line0.axis_size(0))-1,nz,nx) = std::conj(timestep.ft_phi(i,nz,nx));
+    integrator.update(i,nz,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.ft_phi(cNy-(i-line0.axis_size(0))-1,nz,nx) = std::conj(integrator.ft_phi(i,nz,nx));
   }
 
   nz = cNz/2;
   // write top right to top left in the same processor where possible
   for (int i = line0.axis_size(0)+(line1.axis_size(0)-1)/2+1; i < cNy; i++) {
-    timestep.update(i,nz,nx);
-    timestep.ft_phi(cNy-(i-line0.axis_size(0))-1,nz,nx) = std::conj(timestep.ft_phi(i,nz,nx));
+    integrator.update(i,nz,nx);
+    integrator.ft_phi(cNy-(i-line0.axis_size(0))-1,nz,nx) = std::conj(integrator.ft_phi(i,nz,nx));
   }
 
   // and receive extra data from the next processor to put in left
@@ -1798,7 +1798,7 @@ void ConjPlane::line_middle_even_unequal(TimeStep & timestep,int nx)
 	   comm,MPI_STATUS_IGNORE);
   
   for (int i = 0; i < line2.axis_size(0); i++) {
-    timestep.ft_phi(i,nz,nx) = line2(i,0);
+    integrator.ft_phi(i,nz,nx) = line2(i,0);
   }
 
   MPI_Wait(&line_requests[0],MPI_STATUS_IGNORE);

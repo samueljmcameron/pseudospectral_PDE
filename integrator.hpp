@@ -1,12 +1,12 @@
-#ifndef TIMESTEP_HPP
-#define TIMESTEP_HPP
+#ifndef INTEGRATOR_HPP
+#define INTEGRATOR_HPP
 
 #include <random>
 #include <complex>
 
 #include "fftw_mpi_3darray.hpp"
 
-class TimeStep
+class Integrator
 {
 private:
   int local0start;
@@ -39,11 +39,11 @@ private:
 public:
   void ode(std::complex<double> &, std::complex<double>,
 	   std::complex<double>, double);
-  TimeStep(MPI_Comm,const int,const int,const int,
+  Integrator(MPI_Comm,const int,const int,const int,
 	   const int,const int,const int,const int,
 	   const double, const double, const double,
 	   const double,const double, double);
-  ~TimeStep();
+  ~Integrator();
   fftw_MPI_3Darray<std::complex<double>> ft_phi;
   fftw_MPI_3Darray<std::complex<double>> ft_nonlinear;
 

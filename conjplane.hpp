@@ -6,7 +6,7 @@
 
 #include "fftw_mpi_3darray.hpp"
 #include "smatrix.hpp"
-#include "timestep.hpp"
+#include "integrator.hpp"
 
 class ConjPlane
 {
@@ -29,24 +29,24 @@ class ConjPlane
   sMatrix<std::complex<double>> block0,block1,block2,block3;
   sMatrix<std::complex<double>> line0,line1,line2,line3;
 
-  void lefthalf_equal(TimeStep &,int);
-  void lefthalf_unequal(TimeStep &,int);
-  void righthalf_equal(TimeStep &,int);
-  void righthalf_unequal(TimeStep &,int);
-  void middle_odd_equal(TimeStep &,int);
-  void middle_odd_unequal(TimeStep &,int);
-  void middle_even_equal(TimeStep &,int);
-  void middle_even_unequal(TimeStep &,int);
+  void lefthalf_equal(Integrator &,int);
+  void lefthalf_unequal(Integrator &,int);
+  void righthalf_equal(Integrator &,int);
+  void righthalf_unequal(Integrator &,int);
+  void middle_odd_equal(Integrator &,int);
+  void middle_odd_unequal(Integrator &,int);
+  void middle_even_equal(Integrator &,int);
+  void middle_even_unequal(Integrator &,int);
 
 
-  void line_lefthalf_equal(TimeStep &,int);
-  void line_lefthalf_unequal(TimeStep &,int);
-  void line_righthalf_equal(TimeStep &,int);
-  void line_righthalf_unequal(TimeStep &,int);
-  void line_middle_odd_equal(TimeStep &,int);
-  void line_middle_odd_unequal(TimeStep &,int);
-  void line_middle_even_equal(TimeStep &,int);
-  void line_middle_even_unequal(TimeStep &,int);
+  void line_lefthalf_equal(Integrator &,int);
+  void line_lefthalf_unequal(Integrator &,int);
+  void line_righthalf_equal(Integrator &,int);
+  void line_righthalf_unequal(Integrator &,int);
+  void line_middle_odd_equal(Integrator &,int);
+  void line_middle_odd_unequal(Integrator &,int);
+  void line_middle_even_equal(Integrator &,int);
+  void line_middle_even_unequal(Integrator &,int);
 
   
   
@@ -63,23 +63,23 @@ public:
     return divider;
   }
   
-  void single(TimeStep &,int);
+  void single(Integrator &,int);
   
-  void first(TimeStep &,int);
-  void lefthalf(TimeStep &,int);
-  void righthalf(TimeStep &,int);
-  void middle_odd(TimeStep &,int);
-  void middle_even(TimeStep &,int);
-  void last(TimeStep &,int);
+  void first(Integrator &,int);
+  void lefthalf(Integrator &,int);
+  void righthalf(Integrator &,int);
+  void middle_odd(Integrator &,int);
+  void middle_even(Integrator &,int);
+  void last(Integrator &,int);
 
-  void line_single(TimeStep &,int);
+  void line_single(Integrator &,int);
   
-  void line_first(TimeStep &,int);
-  void line_lefthalf(TimeStep &,int);
-  void line_righthalf(TimeStep &,int);
-  void line_middle_odd(TimeStep &,int);
-  void line_middle_even(TimeStep &,int);
-  void line_last(TimeStep &,int);
+  void line_first(Integrator &,int);
+  void line_lefthalf(Integrator &,int);
+  void line_righthalf(Integrator &,int);
+  void line_middle_odd(Integrator &,int);
+  void line_middle_even(Integrator &,int);
+  void line_last(Integrator &,int);
 
 
 };

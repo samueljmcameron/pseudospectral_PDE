@@ -1,9 +1,9 @@
-#include "timestep.hpp"
+#include "integrator.hpp"
 
 
 using namespace std::complex_literals;
 
-TimeStep::TimeStep(MPI_Comm comm,const int Nz, const int Ny, const int Nx,
+Integrator::Integrator(MPI_Comm comm,const int Nz, const int Ny, const int Nx,
 		   const int Lz, const int Ly, const int Lx, const int seed,
 		   const double mobility, const double gamma, const double temp,
 		   const double chi, const double volFH,double dt)
@@ -22,11 +22,11 @@ TimeStep::TimeStep(MPI_Comm comm,const int Nz, const int Ny, const int Nx,
   
 }
 
-TimeStep::~TimeStep()
+Integrator::~Integrator()
 {
 }
 
-void TimeStep::initialize(fftw_MPI_3Darray<double> & phi,
+void Integrator::initialize(fftw_MPI_3Darray<double> & phi,
 			  const double initial_volfrac, const double variance)
 {
   
@@ -41,7 +41,7 @@ void TimeStep::initialize(fftw_MPI_3Darray<double> & phi,
 }
 
 
-void TimeStep::nonlinear(fftw_MPI_3Darray<double>& nonlinear,
+void Integrator::nonlinear(fftw_MPI_3Darray<double>& nonlinear,
 			 const fftw_MPI_3Darray<double>& phi)
 {
   for (int i = 0; i < nonlinear.axis_size(0); i++) {
@@ -58,7 +58,7 @@ void TimeStep::nonlinear(fftw_MPI_3Darray<double>& nonlinear,
 
 }
 
-void TimeStep::update(int i, int j, int k)
+void Integrator::update(int i, int j, int k)
 {
 
   if (i + local0start > Nz/2) {
@@ -86,7 +86,7 @@ void TimeStep::update(int i, int j, int k)
 }
 
 
-void TimeStep::update_real(int i, int j, int k)
+void Integrator::update_real(int i, int j, int k)
 {
 
   if (i + local0start > Nz/2) {
@@ -113,7 +113,7 @@ void TimeStep::update_real(int i, int j, int k)
   return;
 }
 
-void TimeStep::ode(std::complex<double> & y, std::complex<double> ynl,
+void Integrator::ode(std::complex<double> & y, std::complex<double> ynl,
 		   std::complex<double> rnd, double q2)
 {
   y = (y-mobility*q2*dt*(ynl+gamma*q2*y))*normalization*normalization +  rnd;
@@ -123,7 +123,7 @@ void TimeStep::ode(std::complex<double> & y, std::complex<double> ynl,
 
 
 /*
-void TimeStep::ode(std::complex<double> & y, std::complex<double> ynl,
+void Integrator::ode(std::complex<double> & y, std::complex<double> ynl,
 		   std::complex<double> rnd, double q2)
 {
   y = (((y-mobility*q2*ynl*dt)*normalization*normalization + rnd )/(1+mobility*gamma*q2*q2*dt));

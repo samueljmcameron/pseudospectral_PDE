@@ -4,7 +4,7 @@
 
 
 #include "fftw_mpi_3darray.hpp"
-#include "timestep.hpp"
+#include "integrator.hpp"
 #include "conjplane.hpp"
 #include "randompll.hpp"
 #include "griddata.hpp"
@@ -52,7 +52,7 @@ int main()
   double dt = 1e-4;
 
   
-  TimeStep timestep(comm,fullNy,fullNz,fullNx,Ly,Lz,Lx,rpll.get_processor_seed(),mobility,
+  Integrator integrator(comm,fullNy,fullNz,fullNx,Ly,Lz,Lx,rpll.get_processor_seed(),mobility,
 		    gamma,temp,chi,volFH,dt);
 
 
@@ -80,35 +80,35 @@ int main()
   forward_phi = fftw_mpi_plan_dft_r2c_3d(fullNz,fullNy,fullNx,
 					 phi.data(),
 					 reinterpret_cast<fftw_complex*>
-					 (timestep.ft_phi.data()),
+					 (integrator.ft_phi.data()),
 					 comm, FFTW_MPI_TRANSPOSED_OUT);
   
   backward_phi = fftw_mpi_plan_dft_c2r_3d(fullNz,fullNy,fullNx,
 					  reinterpret_cast<fftw_complex*>
-					  (timestep.ft_phi.data()),
+					  (integrator.ft_phi.data()),
 					  phi.data(),comm,FFTW_MPI_TRANSPOSED_IN);
 
   forward_nonlinear = fftw_mpi_plan_dft_r2c_3d(fullNz,fullNy,fullNx,
 					       nonlinear.data(),
 					       reinterpret_cast<fftw_complex*>
-					       (timestep.ft_nonlinear.data()),
+					       (integrator.ft_nonlinear.data()),
 					       comm, FFTW_MPI_TRANSPOSED_OUT);
   
   backward_nonlinear = fftw_mpi_plan_dft_c2r_3d(fullNz,fullNy,fullNx,
 						reinterpret_cast<fftw_complex*>
-						(timestep.ft_nonlinear.data()),
+						(integrator.ft_nonlinear.data()),
 						nonlinear.data(),comm,
 						FFTW_MPI_TRANSPOSED_IN);
   
 
-  timestep.initialize(phi,volfrac,variance);
+  integrator.initialize(phi,volfrac,variance);
   
   std::vector<int> all_cNys(mpi_size);
 
   for (int i = 0; i < mpi_size; i++) {
 
     if (i == id) {
-      all_cNys[i] = timestep.ft_phi.axis_size(0);
+      all_cNys[i] = integrator.ft_phi.axis_size(0);
 
     }
     
@@ -118,10 +118,10 @@ int main()
 
   }
 
-  int cNy = timestep.ft_phi.axis_size(0);
-  int cNz = timestep.ft_phi.axis_size(1);
-  int cNx = timestep.ft_phi.axis_size(2);
-  int local0start = timestep.ft_phi.get_local0start();
+  int cNy = integrator.ft_phi.axis_size(0);
+  int cNz = integrator.ft_phi.axis_size(1);
+  int cNx = integrator.ft_phi.axis_size(2);
+  int local0start = integrator.ft_phi.get_local0start();
 
   int numsteps = 20;
   int startstep = 0;
@@ -158,9 +158,9 @@ int main()
 
   
   for (int it = 1+startstep; it <= numsteps+startstep; it ++) {
-    t += timestep.get_dt();
+    t += integrator.get_dt();
     std::cout << "id " << id << " is on t = " << t << std::endl;
-    timestep.nonlinear(nonlinear,phi); // compute nl(t) given phi(t)
+    integrator.nonlinear(nonlinear,phi); // compute nl(t) given phi(t)
     
     fftw_execute(forward_phi);
     fftw_execute(forward_nonlinear);
@@ -174,7 +174,7 @@ int main()
       for (int nz = 0; nz < cNz; nz ++) {
 	
 	for (int nx = 1; nx < cNx-1; nx++) {
-	  timestep.update(ny,nz,nx);
+	  integrator.update(ny,nz,nx);
 	}
       }
     }
@@ -190,31 +190,31 @@ int main()
       
       if (mpi_size == 1) {
 	
-	cpcl.single(timestep,nx);
-	cpcl.line_single(timestep,nx);
+	cpcl.single(integrator,nx);
+	cpcl.line_single(integrator,nx);
 	
       } else {
 	
 	if (cpcl.is_equal() && id == 0) {
-	  cpcl.first(timestep,nx);
-	  cpcl.line_first(timestep,nx);
+	  cpcl.first(integrator,nx);
+	  cpcl.line_first(integrator,nx);
 	} else if (id < cpcl.get_divider()) {
-	  cpcl.lefthalf(timestep,nx);
-	  cpcl.line_lefthalf(timestep,nx);
+	  cpcl.lefthalf(integrator,nx);
+	  cpcl.line_lefthalf(integrator,nx);
 	} else if (id == cpcl.get_divider()) {
 	  if (mpi_size % 2 == 0) {
-	    cpcl.middle_even(timestep,nx);
-	    cpcl.line_middle_even(timestep,nx);
+	    cpcl.middle_even(integrator,nx);
+	    cpcl.line_middle_even(integrator,nx);
 	  } else {
-	    cpcl.middle_odd(timestep,nx);
-	    cpcl.line_middle_odd(timestep,nx);
+	    cpcl.middle_odd(integrator,nx);
+	    cpcl.line_middle_odd(integrator,nx);
 	  }
 	} else if (!cpcl.is_equal() && id == mpi_size-1) {
-	  cpcl.last(timestep,nx);
-	  cpcl.line_last(timestep,nx);
+	  cpcl.last(integrator,nx);
+	  cpcl.line_last(integrator,nx);
 	} else {
-	  cpcl.righthalf(timestep,nx);
-	  cpcl.line_righthalf(timestep,nx);
+	  cpcl.righthalf(integrator,nx);
+	  cpcl.line_righthalf(integrator,nx);
 	}
       }
     }
@@ -223,19 +223,19 @@ int main()
     // update the eight points where ft_phi must be real
     if (id == 0) {
       int nx = cNx-1;
-      timestep.update_real(0,cNz/2,0);
-      timestep.update_real(0,cNz/2,nx);
-      timestep.update_real(0,0,nx);
-      timestep.ft_phi(0,0,0) = timestep.ft_phi(0,0,0)/(1.0*fullNx*fullNy*fullNz);
+      integrator.update_real(0,cNz/2,0);
+      integrator.update_real(0,cNz/2,nx);
+      integrator.update_real(0,0,nx);
+      integrator.ft_phi(0,0,0) = integrator.ft_phi(0,0,0)/(1.0*fullNx*fullNy*fullNz);
     }
-    if (timestep.ft_phi.get_local0start() <= fullNy/2
-	&& timestep.ft_phi.get_local0start() + cNy -1 >= fullNy/2) {
+    if (integrator.ft_phi.get_local0start() <= fullNy/2
+	&& integrator.ft_phi.get_local0start() + cNy -1 >= fullNy/2) {
       int ny = fullNy/2 - local0start;
       int nx = cNx-1;
-      timestep.update_real(ny,0,0);
-      timestep.update_real(ny,cNz/2,0);
-      timestep.update_real(ny,cNz/2,nx);
-      timestep.update_real(ny,0,nx);
+      integrator.update_real(ny,0,0);
+      integrator.update_real(ny,cNz/2,0);
+      integrator.update_real(ny,cNz/2,nx);
+      integrator.update_real(ny,0,nx);
     }
 
     fftw_execute(backward_phi); // get phi(t+dt)
@@ -263,15 +263,15 @@ int main()
   return 0;
 }
 
-void check_results(TimeStep &timestep, const int id,const int divider,const int nx)
+void check_results(Integrator &integrator, const int id,const int divider,const int nx)
 {
   using namespace std::complex_literals;
   
   // check the resulting blocks to see if everything is done correctly
-  int cNy = timestep.ft_phi.axis_size(0);
-  int Nz = timestep.ft_phi.axis_size(1);
-  int Ny = timestep.ft_phi.get_globalNz();
-  int complex_local = timestep.ft_phi.get_local0start();
+  int cNy = integrator.ft_phi.axis_size(0);
+  int Nz = integrator.ft_phi.axis_size(1);
+  int Ny = integrator.ft_phi.get_globalNz();
+  int complex_local = integrator.ft_phi.get_local0start();
 
   int loopstart;
   if (id == 0 ) {
@@ -291,20 +291,20 @@ void check_results(TimeStep &timestep, const int id,const int divider,const int 
     if (id == 0) {
       int ny = 0;
       for (int j = 1; j < Nz/2; j++) {
-	diff += std::abs(1.0*(ny+complex_local)+1i*(1.0*j) - timestep.ft_phi(ny,j,nx));
+	diff += std::abs(1.0*(ny+complex_local)+1i*(1.0*j) - integrator.ft_phi(ny,j,nx));
       }
       for (int j = Nz/2+1; j < Nz; j++) {
-	diff += std::abs(1.0*(ny+complex_local)-1i*(1.0*(Nz-j)) - timestep.ft_phi(ny,j,nx));
+	diff += std::abs(1.0*(ny+complex_local)-1i*(1.0*(Nz-j)) - integrator.ft_phi(ny,j,nx));
       }
     }
 	
     for (int i = loopstart; i < cNy; i++) {
       for (int j = 1; j < Nz/2; j++) {
-      	diff += std::abs(1.0*(i+complex_local)+1i*(1.0*j) - timestep.ft_phi(i,j,nx));
+      	diff += std::abs(1.0*(i+complex_local)+1i*(1.0*j) - integrator.ft_phi(i,j,nx));
       }
 
       for (int j = Nz/2+1; j < Nz; j++) {
-	diff += std::abs(1.0*(Ny-i-complex_local)-1i*(1.0*(Nz-j)) - timestep.ft_phi(i,j,nx));
+	diff += std::abs(1.0*(Ny-i-complex_local)-1i*(1.0*(Nz-j)) - integrator.ft_phi(i,j,nx));
 	
       }
       
@@ -312,13 +312,13 @@ void check_results(TimeStep &timestep, const int id,const int divider,const int 
     if (id < divider) {
       
       for (int i = loopstart; i < cNy; i++) {
-	diff += std::abs(1.0*(i+complex_local)+1i*(1.0*0) - timestep.ft_phi(i,0,nx));
-	diff += std::abs(1.0*(Ny-i-complex_local)-1i*(1.0*Nz/2) - timestep.ft_phi(i,Nz/2,nx));
+	diff += std::abs(1.0*(i+complex_local)+1i*(1.0*0) - integrator.ft_phi(i,0,nx));
+	diff += std::abs(1.0*(Ny-i-complex_local)-1i*(1.0*Nz/2) - integrator.ft_phi(i,Nz/2,nx));
       }
     } else {
       for (int i = loopstart; i < cNy; i++) {
-	diff += std::abs(1.0*(i+complex_local)+1i*(1.0*Nz/2) - timestep.ft_phi(i,Nz/2,nx));
-	diff += std::abs(1.0*(Ny-i-complex_local)-1i*(1.0*0) - timestep.ft_phi(i,0,nx));
+	diff += std::abs(1.0*(i+complex_local)+1i*(1.0*Nz/2) - integrator.ft_phi(i,Nz/2,nx));
+	diff += std::abs(1.0*(Ny-i-complex_local)-1i*(1.0*0) - integrator.ft_phi(i,0,nx));
       }      
     }
 
@@ -327,20 +327,20 @@ void check_results(TimeStep &timestep, const int id,const int divider,const int 
     
     for (int i = loopstart; i < cNy; i++) {
       for (int j = 1; j < Nz/2; j++) {
-	diff += std::abs(1.0*(i+complex_local)+1i*(1.0*j) - timestep.ft_phi(i,j,nx));
+	diff += std::abs(1.0*(i+complex_local)+1i*(1.0*j) - integrator.ft_phi(i,j,nx));
       }
       for (int j = Nz/2+1; j < Nz; j++) {
-	diff += std::abs(1.0*(Ny-i-complex_local)-1i*(1.0*(Nz-j)) - timestep.ft_phi(i,j,nx));
+	diff += std::abs(1.0*(Ny-i-complex_local)-1i*(1.0*(Nz-j)) - integrator.ft_phi(i,j,nx));
       }
     }
 
     for (int i = loopstart; i < Ny/2-complex_local; i++) {
-      diff += std::abs(1.0*(i+complex_local)+1i*(1.0*0) - timestep.ft_phi(i,0,nx));
-      diff += std::abs(1.0*(Ny-i-complex_local)-1i*(1.0*Nz/2) - timestep.ft_phi(i,Nz/2,nx));
+      diff += std::abs(1.0*(i+complex_local)+1i*(1.0*0) - integrator.ft_phi(i,0,nx));
+      diff += std::abs(1.0*(Ny-i-complex_local)-1i*(1.0*Nz/2) - integrator.ft_phi(i,Nz/2,nx));
     }
     for (int i = Ny/2-complex_local+1; i < cNy; i++) {
-      diff += std::abs(1.0*(i+complex_local)+1i*(1.0*Nz/2) - timestep.ft_phi(i,Nz/2,nx));
-      diff += std::abs(1.0*(Ny-i-complex_local)-1i*(1.0*0) - timestep.ft_phi(i,0,nx));
+      diff += std::abs(1.0*(i+complex_local)+1i*(1.0*Nz/2) - integrator.ft_phi(i,Nz/2,nx));
+      diff += std::abs(1.0*(Ny-i-complex_local)-1i*(1.0*0) - integrator.ft_phi(i,0,nx));
     }
 
     std::cout << "id = " << id << " diff = " << diff << std::endl;
