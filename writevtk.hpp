@@ -18,10 +18,9 @@ namespace writeVTK {
   //  void writeVTKImageData(std::string, const std::vector<T*>&, GridData);
 
   //  template <ptrdiff_t NZ, ptrdiff_t NY, ptrdiff_t NX>
-  void writeVTKImageData(std::string,
-			 const std::vector<ft_dub*>&,
+  void writeVTKImageData(std::string,const std::vector<ft_dub*>&,
 			 GridData);
-
+  void readVTKImageData(std::vector<ft_dub*>&, std::string , GridData);
   
   //  void writeVTK_P_ImageData(std::string,
   //			    const std::vector<ft_dub*>& ,

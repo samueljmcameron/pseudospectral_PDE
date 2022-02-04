@@ -48,7 +48,7 @@ void TimeStep::nonlinear(fftw_MPI_3Darray<double>& nonlinear,
     for (int j = 0; j < nonlinear.axis_size(1); j++) {
       for (int k = 0; k < nonlinear.axis_size(2); k++) {
 	nonlinear(i,j,k)
-	  = temp/volFH*(log(phi(i,j,k)/(1-phi(i,j,k))))+chi*(1-2*phi(i,j,k));
+	  = temp/volFH*(log(phi(i,j,k)/(1-phi(i,j,k)))+chi*(1-2*phi(i,j,k)));
 
 	  //-quad*phi(i,j,k)+quartic*phi(i,j,k)*phi(i,j,k)*phi(i,j,k);
       }
@@ -76,6 +76,7 @@ void TimeStep::update(int i, int j, int k)
   qx = dqx*k;
   q2 = qx*qx + qy*qy + qz*qz;
   noise = complexprefactor*sqrt(q2)*sqrtdt*(real_dist(gen)+1i*real_dist(gen));
+
   
   ode(ft_phi(i,j,k),ft_nonlinear(i,j,k),noise,q2);
   
@@ -104,6 +105,7 @@ void TimeStep::update_real(int i, int j, int k)
   q2 = qx*qx + qy*qy + qz*qz;
   
   noise = realprefactor*sqrt(q2)*sqrtdt*real_dist(gen);
+
   
   ode(ft_phi(i,j,k),ft_nonlinear(i,j,k),noise,q2);
   
@@ -120,11 +122,11 @@ void TimeStep::ode(std::complex<double> & y, std::complex<double> ynl,
 }
 
 
- /*
+/*
 void TimeStep::ode(std::complex<double> & y, std::complex<double> ynl,
 		   std::complex<double> rnd, double q2)
 {
-  y = (((y-mobility*q2*ynl*dt)*normalization + rnd )/(1+mobility*gamma*q2*q2*dt))*normalization;
+  y = (((y-mobility*q2*ynl*dt)*normalization*normalization + rnd )/(1+mobility*gamma*q2*q2*dt));
   return;
 }
- */
+*/

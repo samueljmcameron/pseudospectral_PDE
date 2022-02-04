@@ -45,11 +45,12 @@ int main()
   RandomPll rpll(comm,id,baseseed,mpi_size);
   
   double mobility = 1.0;
-  double gamma = 1.0;
+  double gamma = 100.0;
   double temp = 1.0;
   double chi = 2.5;
   double volFH = 0.01;
   double dt = 1e-4;
+
   
   TimeStep timestep(comm,fullNy,fullNz,fullNx,Ly,Lz,Lx,rpll.get_processor_seed(),mobility,
 		    gamma,temp,chi,volFH,dt);
@@ -57,7 +58,7 @@ int main()
 
 
   double volfrac = 0.3;
-  double variance = 0.1;
+  double variance = 0.0;
 
 
 
@@ -122,24 +123,42 @@ int main()
   int cNx = timestep.ft_phi.axis_size(2);
   int local0start = timestep.ft_phi.get_local0start();
 
-  int numsteps = 1000;
+  int numsteps = 20;
+  int startstep = 0;
 
   double t = 0;
+  /*
+  {
+    std::vector<fftw_MPI_3Darray<double>*> scalars;
+    
+    scalars.push_back(&phi);
+    
+    std::string fname = std::string("data/test") + std::string("_p") + std::to_string(id) ;
+    std::string fname_p = fname + std::string("_") +  std::to_string(startstep) +  std::string(".vti");
+    
+    writeVTK::readVTKImageData(scalars,fname_p,gridstart);
+    
+  }
+  */
+
+
+
+
   {
     std::vector<fftw_MPI_3Darray<double>*> scalars;
   
     scalars.push_back(&phi);
     
     std::string fname = std::string("data/test") + std::string("_p") + std::to_string(id) ;
-    std::string fname_p = fname + std::string("_") +  std::to_string(0) +  std::string(".vti");
+    std::string fname_p = fname + std::string("_") +  std::to_string(startstep) +  std::string(".vti");
 
     writeVTK::writeVTKImageData(fname_p,scalars,gridstart);
   }
 
 
   
-  for (int it = 1; it <= numsteps; it ++) {
-    t = it*timestep.get_dt();
+  for (int it = 1+startstep; it <= numsteps+startstep; it ++) {
+    t += timestep.get_dt();
     std::cout << "id " << id << " is on t = " << t << std::endl;
     timestep.nonlinear(nonlinear,phi); // compute nl(t) given phi(t)
     
@@ -221,14 +240,16 @@ int main()
 
     fftw_execute(backward_phi); // get phi(t+dt)
 
-    std::vector<fftw_MPI_3Darray<double>*> scalars;
-  
-    scalars.push_back(&phi);
+    if (it % 1 == 0) {
+      std::vector<fftw_MPI_3Darray<double>*> scalars;
+      
+      scalars.push_back(&phi);
     
-    std::string fname = std::string("data/test") + std::string("_p") + std::to_string(id) ;
-    std::string fname_p = fname + std::string("_") +  std::to_string(it) +  std::string(".vti");
-
-    writeVTK::writeVTKImageData(fname_p,scalars,gridstart);
+      std::string fname = std::string("data/test") + std::string("_p") + std::to_string(id) ;
+      std::string fname_p = fname + std::string("_") +  std::to_string(it) +  std::string(".vti");
+      
+      writeVTK::writeVTKImageData(fname_p,scalars,gridstart);
+    }
   }
 
   fftw_destroy_plan(forward_phi);

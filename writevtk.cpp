@@ -101,6 +101,89 @@ void writeVTK::writeVTKImageData(std::string fname,
   
 }
 
+
+/* Simple function to write a vtk file with binary data. */
+void writeVTK::readVTKImageData(std::vector<ft_dub*>& scalar_outputs,
+				std::string fname, GridData grid)
+/*============================================================================*/
+/*
+  Write scalar image data to a vtk (and paraview) compatible file
+  (extension .vti).
+
+  Parameters
+  ----------
+
+  scalar_outputs : vector of pointers
+      Each component of the vector points to a unique 3D array of data
+      of type fftw_MPI_3Darray<double>.
+
+  fname : string
+      Name of file to read from with extension (either ".vti" or ".pvti").
+
+  grid : struct of grid data
+      Contains the following attributes: Ox, Oy, Oz for the
+      start points of the grid (i.e. if you want x component to start
+      at -4, then Ox=-4), and dx, dy, dz for the grid spacings.
+*/
+/*============================================================================*/
+
+{
+
+  // determine byte length of input data
+  const int zstart = scalar_outputs[0]->get_local0start();
+
+  
+  const int Nz0 = scalar_outputs[0]->axis_size(0);
+  const int Ny0 = scalar_outputs[0]->axis_size(1);
+  const int Nx0 = scalar_outputs[0]->axis_size(2);
+
+  
+  unsigned int bytelength = Nx0*Ny0*Nz0*sizeof(double);
+
+  std::string stopline = "";
+
+  
+  for (const auto &elem : scalar_outputs)
+    if ( elem->axis_size(0) != Nz0 || elem->axis_size(1) != Ny0
+	 || elem->axis_size(2) != Nx0)
+      throw std::runtime_error("All scalars must be on same grid.");
+  
+  
+  auto myfile = std::fstream(fname, std::ios::in | std::ios::binary);
+
+  
+
+  while (stopline != "<AppendedData encoding=\"raw\">") {
+    std::getline(myfile,stopline);
+  }
+
+  char memblock[2];
+  
+  myfile.read(memblock,1);
+  stopline = memblock[0];
+  std::cout << stopline << std::endl;
+
+  std::cout << bytelength << std::endl;
+  
+  for (const auto &elem : scalar_outputs)    {
+
+    myfile.read((char*)&bytelength,sizeof(bytelength));
+    //    bytelength = *(unsigned int*) itmp;
+    std::cout << bytelength << std::endl;
+    // since real fftw arrays aren't contiguous, need to write each row separately.
+    for (int i = 0; i < Nz0; i++) {
+      for (int j = 0; j < Ny0; j++) {
+	myfile.read((char*)&(*elem)(i,j,0),sizeof(double)*Nx0);
+	//
+      }
+    }
+  }
+
+  myfile.close();
+  
+}
+
+
 /*
 void writeVTK::writeVTK_P_ImageData(std::string fname,
 				 const std::vector<ft_dub*>& scalar_outputs,
