@@ -9,6 +9,7 @@
 #include "randompll.hpp"
 #include "griddata.hpp"
 #include "writevtk.hpp"
+#include "solutionparams.hpp"
 
 double fourier_length(int Nx,double dx)
 {
@@ -46,16 +47,31 @@ int main()
   int baseseed = 129480;
   RandomPll rpll(comm,id,baseseed,mpi_size);
   
-  double mobility = 1.0;
-  double gamma = 100.0;
-  double temp = 1.0;
-  double chi = 2.5;
-  double volFH = 0.01;
   double dt = 1e-4;
 
+
+  std::vector<std::string> splitvec;
+
+  splitvec.push_back("mobility");
+  splitvec.push_back("1.0");
+  splitvec.push_back("gamma");
+  splitvec.push_back("100.0");
+  splitvec.push_back("temp");
+  splitvec.push_back("1.0");
+  splitvec.push_back("chi");
+  splitvec.push_back("2.5");
+  splitvec.push_back("volFH");
+  splitvec.push_back("0.01");
+
+  SolutionParams solparams(splitvec);
+
+  if (id == 0) {
+    solparams.printall();
+  }
   
-  Integrator integrator(comm,fourier,rpll.get_processor_seed(),mobility,
-			gamma,temp,chi,volFH,dt);
+
+  
+  Integrator integrator(comm,fourier,rpll.get_processor_seed(),solparams,dt);
 
 
 

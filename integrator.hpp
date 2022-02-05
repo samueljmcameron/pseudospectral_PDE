@@ -6,6 +6,7 @@
 
 #include "fftw_mpi_3darray.hpp"
 #include "griddata.hpp"
+#include "solutionparams.hpp"
 
 class Integrator
 {
@@ -40,8 +41,7 @@ public:
   void ode(std::complex<double> &, std::complex<double>,
 	   std::complex<double>, double);
   Integrator(MPI_Comm,const GridData&,const int,
-	     const double, const double, const double,
-	     const double,const double, const double);
+	     const SolutionParams&,const double);
   ~Integrator();
   fftw_MPI_3Darray<std::complex<double>> ft_phi;
   fftw_MPI_3Darray<std::complex<double>> ft_nonlinear;

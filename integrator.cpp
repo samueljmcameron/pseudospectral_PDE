@@ -4,12 +4,12 @@
 using namespace std::complex_literals;
 
 Integrator::Integrator(MPI_Comm comm,const GridData& fourier, const int seed,
-		       const double mobility, const double gamma, const double temp,
-		       const double chi, const double volFH,const double dt)
+		       const SolutionParams& solparams,const double dt)
   : ft_phi(comm,"ft_phi",fourier), ft_nonlinear(comm,"ft_nl",fourier),
     fourier(fourier),seed(seed),gen(seed),
-    real_dist(-0.5,0.5),mobility(mobility),gamma(gamma),temp(temp),chi(chi),
-    volFH(volFH),dt(dt),normalization(sqrt(1.0/(fourier.Nx*fourier.Ny*fourier.Nz)))
+    real_dist(-0.5,0.5),mobility(solparams.mobility),gamma(solparams.gamma),
+    temp(solparams.temp),chi(solparams.chi), volFH(solparams.volFH),
+    dt(dt),normalization(sqrt(1.0/(fourier.Nx*fourier.Ny*fourier.Nz)))
 {
 
   double tmp = fourier.dx*fourier.dy*fourier.dz/(2*M_PI*2*M_PI*2*M_PI);
