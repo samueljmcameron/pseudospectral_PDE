@@ -2,6 +2,7 @@
 
 #include "fftw_mpi_3darray.hpp"
 
+
 template <typename T>
 fftw_MPI_3Darray<T>::fftw_MPI_3Darray(MPI_Comm comm,std::string name,
 				      const int Nz,const int Ny,
@@ -58,6 +59,64 @@ fftw_MPI_3Darray<T>::fftw_MPI_3Darray(MPI_Comm comm,std::string name,
   array_name = name;
 
 };
+
+
+template <typename T>
+fftw_MPI_3Darray<T>::fftw_MPI_3Darray(MPI_Comm comm,std::string name,
+				      const GridData& grid)
+/*
+  Constructor for a 3D array with axis sizes (Nz,Ny,Nx) (the x dimension
+  varies the quickest). The array is not contiguous in memory for different
+  y and z indices. Values are either all doubles, or all std::complex.
+
+  Parameters
+  ----------
+  comm : mpi communicator
+      Typically MPI_COMM_WORLD, but could be other I suppose.
+  name : string
+      The name of the array (useful when needing to save data).
+  Nz : const int
+      The axis size in the z dimension (first index).
+  Ny : const int
+      The axis size in the y dimension (second index).
+  Nx : const int
+      The axis size in the x direction (third index).
+
+*/
+{
+
+
+  ptrdiff_t local_n0;
+
+  alloc_local = fftw_mpi_local_size_3d(grid.Nz, grid.Ny , grid.Nx/2 + 1, comm,
+				       &local_n0,&local_0_start);
+  
+  
+  _globalNz = grid.Nz;
+  _sizeax = new ptrdiff_t[3];
+  _sizeax[0] = local_n0;
+  _sizeax[1] = grid.Ny;
+  
+  
+  if (typeid(T) == typeid(double)) {
+    _sizeax[2] = grid.Nx;
+    arr = (T*) fftw_alloc_real(2*alloc_local);
+    spacer = 2*(grid.Nx/2+1);    
+    _size = spacer*alloc_local;
+    
+  } else if (typeid(T) == typeid(std::complex<double>)) {
+    _sizeax[2] = grid.Nx/2+1;
+    spacer=grid.Nx/2+1;
+    arr = (T*) fftw_alloc_complex(alloc_local);
+    _size = alloc_local;
+  } else
+    throw std::runtime_error("fftw_MPI_3Darray can only have type double, "
+			     "or std::complex<double>.");
+  
+  array_name = name;
+
+};
+
 
 
 template <typename T>

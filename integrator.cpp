@@ -3,22 +3,22 @@
 
 using namespace std::complex_literals;
 
-Integrator::Integrator(MPI_Comm comm,const int Nz, const int Ny, const int Nx,
-		   const int Lz, const int Ly, const int Lx, const int seed,
-		   const double mobility, const double gamma, const double temp,
-		   const double chi, const double volFH,double dt)
-  : ft_phi(comm,"ft_phi",Nz,Ny,Nx), ft_nonlinear(comm,"ft_nl",Nz,Ny,Nx),
-    dqz(2*M_PI/Lz),dqy(2*M_PI/Ly),dqx(2*M_PI/Lx),seed(seed),gen(seed),
+Integrator::Integrator(MPI_Comm comm,const GridData& fourier, const int seed,
+		       const double mobility, const double gamma, const double temp,
+		       const double chi, const double volFH,const double dt)
+  : ft_phi(comm,"ft_phi",fourier), ft_nonlinear(comm,"ft_nl",fourier),
+    fourier(fourier),seed(seed),gen(seed),
     real_dist(-0.5,0.5),mobility(mobility),gamma(gamma),temp(temp),chi(chi),
-    volFH(volFH),dt(dt),normalization(sqrt(1.0/(Nx*Ny*Nz))),Nz(Nz),Ny(Ny),Nx(Nx)
+    volFH(volFH),dt(dt),normalization(sqrt(1.0/(fourier.Nx*fourier.Ny*fourier.Nz)))
 {
 
+  double tmp = fourier.dx*fourier.dy*fourier.dz/(2*M_PI*2*M_PI*2*M_PI);
   local0start = ft_phi.get_local0start();
-  complexprefactor = sqrt(12*temp*mobility/(Lx*Ly*Lz));
-  realprefactor = sqrt(24*temp*mobility/(Lx*Ly*Lz));
+  complexprefactor = sqrt(12*temp*mobility*tmp);
+  realprefactor = sqrt(24*temp*mobility*tmp);
   sqrtdt = sqrt(dt);
 
-  std::cout << (dqz*dqz*Nz/2*Nz/2+dqy*dqy*Ny/2*Ny/2+dqx*dqx*Nx/2*Nx/2) << std::endl;
+  std::cout << (fourier.dz*fourier.dz*fourier.Nz/2*fourier.Nz/2+fourier.dy*fourier.dy*fourier.Ny/2*fourier.Ny/2+fourier.dx*fourier.dx*fourier.Nx/2*fourier.Nx/2) << std::endl;
   
 }
 
@@ -61,19 +61,19 @@ void Integrator::nonlinear(fftw_MPI_3Darray<double>& nonlinear,
 void Integrator::update(int i, int j, int k)
 {
 
-  if (i + local0start > Nz/2) {
-    qz = dqz*(Nz- i - local0start);
+  if (i + local0start > fourier.Nz/2) {
+    qz = fourier.dz*(fourier.Nz- i - local0start);
   } else {
-    qz = dqz*(i + local0start);
+    qz = fourier.dz*(i + local0start);
   }
 
-  if (j > Ny/2) {
-    qy = dqy*(Ny-j);
+  if (j > fourier.Ny/2) {
+    qy = fourier.dy*(fourier.Ny-j);
   } else {
-    qy = dqy*j;
+    qy = fourier.dy*j;
   }  
 
-  qx = dqx*k;
+  qx = fourier.dx*k;
   q2 = qx*qx + qy*qy + qz*qz;
   noise = complexprefactor*sqrt(q2)*sqrtdt*(real_dist(gen)+1i*real_dist(gen));
 
@@ -89,19 +89,19 @@ void Integrator::update(int i, int j, int k)
 void Integrator::update_real(int i, int j, int k)
 {
 
-  if (i + local0start > Nz/2) {
-    qz = dqz*(Nz- i - local0start);
+  if (i + local0start > fourier.Nz/2) {
+    qz = fourier.dz*(fourier.Nz- i - local0start);
   } else {
-    qz = dqz*(i + local0start);
+    qz = fourier.dz*(i + local0start);
   }
 
-  if (j > Ny/2) {
-    qy = dqy*(Ny-j);
+  if (j > fourier.Ny/2) {
+    qy = fourier.dy*(fourier.Ny-j);
   } else {
-    qy = dqy*j;
+    qy = fourier.dy*j;
   }
   
-  qx = dqx*k;
+  qx = fourier.dx*k;
   q2 = qx*qx + qy*qy + qz*qz;
   
   noise = realprefactor*sqrt(q2)*sqrtdt*real_dist(gen);

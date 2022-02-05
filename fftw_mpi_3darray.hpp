@@ -6,7 +6,7 @@
 #include <vector>
 #include <string>
 
-
+#include "griddata.hpp"
 
 template <typename T>
 class fftw_MPI_3Darray 
@@ -29,6 +29,9 @@ private:
 public:
   fftw_MPI_3Darray(MPI_Comm ,std::string ,const int , const int ,
 		   const int );
+
+  fftw_MPI_3Darray(MPI_Comm ,std::string ,const GridData& );
+
   
   ~fftw_MPI_3Darray();
 

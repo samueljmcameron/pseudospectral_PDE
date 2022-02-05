@@ -5,6 +5,7 @@
 #include <complex>
 
 #include "fftw_mpi_3darray.hpp"
+#include "griddata.hpp"
 
 class Integrator
 {
@@ -13,11 +14,10 @@ private:
 
   double qx,qy,qz,q2;
 
-  const double dqx,dqy,dqz;
-
-  const int Nx,Ny,Nz;
+  const GridData fourier;
 
   const int seed;
+
 
   const double mobility;
   const double gamma;
@@ -39,10 +39,9 @@ private:
 public:
   void ode(std::complex<double> &, std::complex<double>,
 	   std::complex<double>, double);
-  Integrator(MPI_Comm,const int,const int,const int,
-	   const int,const int,const int,const int,
-	   const double, const double, const double,
-	   const double,const double, double);
+  Integrator(MPI_Comm,const GridData&,const int,
+	     const double, const double, const double,
+	     const double,const double, const double);
   ~Integrator();
   fftw_MPI_3Darray<std::complex<double>> ft_phi;
   fftw_MPI_3Darray<std::complex<double>> ft_nonlinear;
