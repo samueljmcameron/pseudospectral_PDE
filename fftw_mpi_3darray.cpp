@@ -88,25 +88,25 @@ fftw_MPI_3Darray<T>::fftw_MPI_3Darray(MPI_Comm comm,std::string name,
 
   ptrdiff_t local_n0;
 
-  alloc_local = fftw_mpi_local_size_3d(grid.Nz, grid.Ny , grid.Nx/2 + 1, comm,
+  alloc_local = fftw_mpi_local_size_3d(grid.get_Nz(), grid.get_Ny() , grid.get_Nx()/2 + 1, comm,
 				       &local_n0,&local_0_start);
   
   
-  _globalNz = grid.Nz;
+  _globalNz = grid.get_Nz();
   _sizeax = new ptrdiff_t[3];
   _sizeax[0] = local_n0;
-  _sizeax[1] = grid.Ny;
+  _sizeax[1] = grid.get_Ny();
   
   
   if (typeid(T) == typeid(double)) {
-    _sizeax[2] = grid.Nx;
+    _sizeax[2] = grid.get_Nx();
     arr = (T*) fftw_alloc_real(2*alloc_local);
-    spacer = 2*(grid.Nx/2+1);    
+    spacer = 2*(grid.get_Nx()/2+1);    
     _size = spacer*alloc_local;
     
   } else if (typeid(T) == typeid(std::complex<double>)) {
-    _sizeax[2] = grid.Nx/2+1;
-    spacer=grid.Nx/2+1;
+    _sizeax[2] = grid.get_Nx()/2+1;
+    spacer=grid.get_Nx()/2+1;
     arr = (T*) fftw_alloc_complex(alloc_local);
     _size = alloc_local;
   } else

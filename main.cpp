@@ -8,22 +8,16 @@
 #include "conjplane.hpp"
 #include "randompll.hpp"
 #include "griddata.hpp"
-#include "writevtk.hpp"
+#include "iovtk.hpp"
 #include "solutionparams.hpp"
-
-double fourier_length(int Nx,double dx)
-{
-  return 2*M_PI/dx;
-}
 
 int main()
 {
 
-  GridData realspace(64,64,64,100.0,100.0,100.0);
-  GridData fourier(realspace.Ny,realspace.Nz,realspace.Nx,
-		   fourier_length(realspace.Ny,realspace.dy),
-		   fourier_length(realspace.Nz,realspace.dz),
-		   fourier_length(realspace.Nx,realspace.dx));
+  GridData realspace(64,100.0);
+  GridData fourier = realspace.fft_grid();
+
+  fourier.transpose_yz();
   
 
   MPI_Comm comm = MPI_COMM_WORLD;
@@ -86,24 +80,28 @@ int main()
   fftw_plan forward_nonlinear, backward_nonlinear;
 
   
-  forward_phi = fftw_mpi_plan_dft_r2c_3d(realspace.Nz,realspace.Ny,realspace.Nx,
+  forward_phi = fftw_mpi_plan_dft_r2c_3d(realspace.get_Nz(),realspace.get_Ny(),
+					 realspace.get_Nx(),
 					 phi.data(),
 					 reinterpret_cast<fftw_complex*>
 					 (integrator.ft_phi.data()),
 					 comm, FFTW_MPI_TRANSPOSED_OUT);
   
-  backward_phi = fftw_mpi_plan_dft_c2r_3d(realspace.Nz,realspace.Ny,realspace.Nx,
+  backward_phi = fftw_mpi_plan_dft_c2r_3d(realspace.get_Nz(),realspace.get_Ny(),
+					  realspace.get_Nx(),
 					  reinterpret_cast<fftw_complex*>
 					  (integrator.ft_phi.data()),
 					  phi.data(),comm,FFTW_MPI_TRANSPOSED_IN);
 
-  forward_nonlinear = fftw_mpi_plan_dft_r2c_3d(realspace.Nz,realspace.Ny,realspace.Nx,
+  forward_nonlinear = fftw_mpi_plan_dft_r2c_3d(realspace.get_Nz(),realspace.get_Ny(),
+					       realspace.get_Nx(),
 					       nonlinear.data(),
 					       reinterpret_cast<fftw_complex*>
 					       (integrator.ft_nonlinear.data()),
 					       comm, FFTW_MPI_TRANSPOSED_OUT);
   
-  backward_nonlinear = fftw_mpi_plan_dft_c2r_3d(realspace.Nz,realspace.Ny,realspace.Nx,
+  backward_nonlinear = fftw_mpi_plan_dft_c2r_3d(realspace.get_Nz(),realspace.get_Ny(),
+						realspace.get_Nx(),
 						reinterpret_cast<fftw_complex*>
 						(integrator.ft_nonlinear.data()),
 						nonlinear.data(),comm,
@@ -145,25 +143,25 @@ int main()
     std::string fname = std::string("data/test") + std::string("_p") + std::to_string(id) ;
     std::string fname_p = fname + std::string("_") +  std::to_string(startstep) +  std::string(".vti");
     
-    writeVTK::readVTKImageData(scalars,fname_p,realspace);
+
     
   }
   */
 
 
 
+  std::string fname = std::string("data/test") + std::string("_p") + std::to_string(id) ;
+  std::string fname_p = fname + std::string("_") +  std::to_string(startstep) +  std::string(".vti");
 
-  {
-    std::vector<fftw_MPI_3Darray<double>*> scalars;
+  bool restart_flag = false;
   
-    scalars.push_back(&phi);
+  
+  if (restart_flag) {
+    ioVTK::readVTKImageData({&phi},fname_p,realspace);
+  } else {
+    ioVTK::writeVTKImageData(fname_p,{&phi},realspace);
     
-    std::string fname = std::string("data/test") + std::string("_p") + std::to_string(id) ;
-    std::string fname_p = fname + std::string("_") +  std::to_string(startstep) +  std::string(".vti");
-
-    writeVTK::writeVTKImageData(fname_p,scalars,realspace);
   }
-
 
   
   for (int it = 1+startstep; it <= numsteps+startstep; it ++) {
@@ -193,7 +191,7 @@ int main()
     // update the two planes at nx = 0 and nx = Nx-1
     // which are constrained to ensure that phi remains real
     
-    ConjPlane cpcl(mpi_size,id,comm,all_local_fftNzs,fourier.Ny);
+    ConjPlane cpcl(mpi_size,id,comm,all_local_fftNzs,fourier.get_Ny());
     
     for (int nx = 0; nx < local_fftNx; nx += local_fftNx-1) {
       
@@ -235,11 +233,13 @@ int main()
       integrator.update_real(0,local_fftNy/2,0);
       integrator.update_real(0,local_fftNy/2,nx);
       integrator.update_real(0,0,nx);
-      integrator.ft_phi(0,0,0) = integrator.ft_phi(0,0,0)/(1.0*realspace.Nx*realspace.Ny*realspace.Nz);
+      integrator.ft_phi(0,0,0) = integrator.ft_phi(0,0,0)/(1.0*realspace.get_Nx()
+							   *realspace.get_Ny()
+							   *realspace.get_Nz());
     }
-    if (integrator.ft_phi.get_local0start() <= fourier.Nz/2
-	&& integrator.ft_phi.get_local0start() + local_fftNz -1 >= fourier.Nz/2) {
-      int nz = fourier.Nz/2 - local0start;
+    if (integrator.ft_phi.get_local0start() <= fourier.get_Nz()/2
+	&& integrator.ft_phi.get_local0start() + local_fftNz -1 >= fourier.get_Nz()/2) {
+      int nz = fourier.get_Nz()/2 - local0start;
       int nx = local_fftNx-1;
       integrator.update_real(nz,0,0);
       integrator.update_real(nz,local_fftNy/2,0);
@@ -250,14 +250,10 @@ int main()
     fftw_execute(backward_phi); // get phi(t+dt)
 
     if (it % 1 == 0) {
-      std::vector<fftw_MPI_3Darray<double>*> scalars;
+
+      fname_p = fname + std::string("_") +  std::to_string(it) +  std::string(".vti");
       
-      scalars.push_back(&phi);
-    
-      std::string fname = std::string("data/test") + std::string("_p") + std::to_string(id) ;
-      std::string fname_p = fname + std::string("_") +  std::to_string(it) +  std::string(".vti");
-      
-      writeVTK::writeVTKImageData(fname_p,scalars,realspace);
+      ioVTK::writeVTKImageData(fname_p,{&phi},realspace);
     }
   }
 

@@ -9,16 +9,16 @@ Integrator::Integrator(MPI_Comm comm,const GridData& fourier, const int seed,
     fourier(fourier),seed(seed),gen(seed),
     real_dist(-0.5,0.5),mobility(solparams.mobility),gamma(solparams.gamma),
     temp(solparams.temp),chi(solparams.chi), volFH(solparams.volFH),
-    dt(dt),normalization(sqrt(1.0/(fourier.Nx*fourier.Ny*fourier.Nz)))
+    dt(dt),normalization(sqrt(1.0/(fourier.get_Nx()*fourier.get_Ny()*fourier.get_Nz())))
 {
 
-  double tmp = fourier.dx*fourier.dy*fourier.dz/(2*M_PI*2*M_PI*2*M_PI);
+  double tmp = fourier.get_dx()*fourier.get_dy()*fourier.get_dz()/(2*M_PI*2*M_PI*2*M_PI);
   local0start = ft_phi.get_local0start();
   complexprefactor = sqrt(12*temp*mobility*tmp);
   realprefactor = sqrt(24*temp*mobility*tmp);
   sqrtdt = sqrt(dt);
 
-  std::cout << (fourier.dz*fourier.dz*fourier.Nz/2*fourier.Nz/2+fourier.dy*fourier.dy*fourier.Ny/2*fourier.Ny/2+fourier.dx*fourier.dx*fourier.Nx/2*fourier.Nx/2) << std::endl;
+  std::cout << (fourier.get_dz()*fourier.get_dz()*fourier.get_Nz()/2*fourier.get_Nz()/2+fourier.get_dy()*fourier.get_dy()*fourier.get_Ny()/2*fourier.get_Ny()/2+fourier.get_dx()*fourier.get_dx()*fourier.get_Nx()/2*fourier.get_Nx()/2) << std::endl;
   
 }
 
@@ -61,19 +61,19 @@ void Integrator::nonlinear(fftw_MPI_3Darray<double>& nonlinear,
 void Integrator::update(int i, int j, int k)
 {
 
-  if (i + local0start > fourier.Nz/2) {
-    qz = fourier.dz*(fourier.Nz- i - local0start);
+  if (i + local0start > fourier.get_Nz()/2) {
+    qz = fourier.get_dz()*(fourier.get_Nz()- i - local0start);
   } else {
-    qz = fourier.dz*(i + local0start);
+    qz = fourier.get_dz()*(i + local0start);
   }
 
-  if (j > fourier.Ny/2) {
-    qy = fourier.dy*(fourier.Ny-j);
+  if (j > fourier.get_Ny()/2) {
+    qy = fourier.get_dy()*(fourier.get_Ny()-j);
   } else {
-    qy = fourier.dy*j;
+    qy = fourier.get_dy()*j;
   }  
 
-  qx = fourier.dx*k;
+  qx = fourier.get_dx()*k;
   q2 = qx*qx + qy*qy + qz*qz;
   noise = complexprefactor*sqrt(q2)*sqrtdt*(real_dist(gen)+1i*real_dist(gen));
 
@@ -89,19 +89,19 @@ void Integrator::update(int i, int j, int k)
 void Integrator::update_real(int i, int j, int k)
 {
 
-  if (i + local0start > fourier.Nz/2) {
-    qz = fourier.dz*(fourier.Nz- i - local0start);
+  if (i + local0start > fourier.get_Nz()/2) {
+    qz = fourier.get_dz()*(fourier.get_Nz()- i - local0start);
   } else {
-    qz = fourier.dz*(i + local0start);
+    qz = fourier.get_dz()*(i + local0start);
   }
 
-  if (j > fourier.Ny/2) {
-    qy = fourier.dy*(fourier.Ny-j);
+  if (j > fourier.get_Ny()/2) {
+    qy = fourier.get_dy()*(fourier.get_Ny()-j);
   } else {
-    qy = fourier.dy*j;
+    qy = fourier.get_dy()*j;
   }
   
-  qx = fourier.dx*k;
+  qx = fourier.get_dx()*k;
   q2 = qx*qx + qy*qy + qz*qz;
   
   noise = realprefactor*sqrt(q2)*sqrtdt*real_dist(gen);
