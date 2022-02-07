@@ -10,6 +10,7 @@
 #include "griddata.hpp"
 #include "iovtk.hpp"
 #include "solutionparams.hpp"
+#include "timestep.hpp"
 
 int main()
 {
@@ -109,46 +110,11 @@ int main()
   
 
   integrator.initialize(phi,volfrac,variance);
-  
-  std::vector<int> all_local_fftNzs(mpi_size);
-
-  for (int i = 0; i < mpi_size; i++) {
-
-    if (i == id) {
-      all_local_fftNzs[i] = integrator.ft_phi.axis_size(0);
-
-    }
-    
-    MPI_Bcast(&all_local_fftNzs[i],1,MPI_INT,i,comm);
-
-    
-
-  }
-
-  int local_fftNz = integrator.ft_phi.axis_size(0);
-  int local_fftNy = integrator.ft_phi.axis_size(1);
-  int local_fftNx = integrator.ft_phi.axis_size(2);
-  int local0start = integrator.ft_phi.get_local0start();
 
   int numsteps = 20;
   int startstep = 0;
 
   double t = 0;
-  /*
-  {
-    std::vector<fftw_MPI_3Darray<double>*> scalars;
-    
-    scalars.push_back(&phi);
-    
-    std::string fname = std::string("data/test") + std::string("_p") + std::to_string(id) ;
-    std::string fname_p = fname + std::string("_") +  std::to_string(startstep) +  std::string(".vti");
-    
-
-    
-  }
-  */
-
-
 
   std::string fname = std::string("data/test") + std::string("_p") + std::to_string(id) ;
   std::string fname_p = fname + std::string("_") +  std::to_string(startstep) +  std::string(".vti");
@@ -163,6 +129,7 @@ int main()
     
   }
 
+  TimeStep timestep(comm,mpi_size,id,fourier.get_Nz(),fourier.get_Ny());
   
   for (int it = 1+startstep; it <= numsteps+startstep; it ++) {
     t += integrator.get_dt();
@@ -171,81 +138,8 @@ int main()
     
     fftw_execute(forward_phi);
     fftw_execute(forward_nonlinear);
-    
 
-
-    // update the bulk of the system which has no constraints
-    
-    for (int nz = 0; nz < local_fftNz; nz ++) {
-      
-      for (int ny = 0; ny < local_fftNy; ny ++) {
-	
-	for (int nx = 1; nx < local_fftNx-1; nx++) {
-	  integrator.update(nz,ny,nx);
-	}
-      }
-    }
-    
-    
-
-    // update the two planes at nx = 0 and nx = Nx-1
-    // which are constrained to ensure that phi remains real
-    
-    ConjPlane cpcl(mpi_size,id,comm,all_local_fftNzs,fourier.get_Ny());
-    
-    for (int nx = 0; nx < local_fftNx; nx += local_fftNx-1) {
-      
-      if (mpi_size == 1) {
-	
-	cpcl.single(integrator,nx);
-	cpcl.line_single(integrator,nx);
-	
-      } else {
-	
-	if (cpcl.is_equal() && id == 0) {
-	  cpcl.first(integrator,nx);
-	  cpcl.line_first(integrator,nx);
-	} else if (id < cpcl.get_divider()) {
-	  cpcl.lefthalf(integrator,nx);
-	  cpcl.line_lefthalf(integrator,nx);
-	} else if (id == cpcl.get_divider()) {
-	  if (mpi_size % 2 == 0) {
-	    cpcl.middle_even(integrator,nx);
-	    cpcl.line_middle_even(integrator,nx);
-	  } else {
-	    cpcl.middle_odd(integrator,nx);
-	    cpcl.line_middle_odd(integrator,nx);
-	  }
-	} else if (!cpcl.is_equal() && id == mpi_size-1) {
-	  cpcl.last(integrator,nx);
-	  cpcl.line_last(integrator,nx);
-	} else {
-	  cpcl.righthalf(integrator,nx);
-	  cpcl.line_righthalf(integrator,nx);
-	}
-      }
-    }
-    
-    
-    // update the eight points where ft_phi must be real
-    if (id == 0) {
-      int nx = local_fftNx-1;
-      integrator.update_real(0,local_fftNy/2,0);
-      integrator.update_real(0,local_fftNy/2,nx);
-      integrator.update_real(0,0,nx);
-      integrator.ft_phi(0,0,0) = integrator.ft_phi(0,0,0)/(1.0*realspace.get_Nx()
-							   *realspace.get_Ny()
-							   *realspace.get_Nz());
-    }
-    if (integrator.ft_phi.get_local0start() <= fourier.get_Nz()/2
-	&& integrator.ft_phi.get_local0start() + local_fftNz -1 >= fourier.get_Nz()/2) {
-      int nz = fourier.get_Nz()/2 - local0start;
-      int nx = local_fftNx-1;
-      integrator.update_real(nz,0,0);
-      integrator.update_real(nz,local_fftNy/2,0);
-      integrator.update_real(nz,local_fftNy/2,nx);
-      integrator.update_real(nz,0,nx);
-    }
+    timestep.update(t,integrator);    
 
     fftw_execute(backward_phi); // get phi(t+dt)
 

@@ -58,7 +58,7 @@ void Integrator::nonlinear(fftw_MPI_3Darray<double>& nonlinear,
 
 }
 
-void Integrator::update(int i, int j, int k)
+void Integrator::integrate(int i, int j, int k)
 {
 
   if (i + local0start > fourier.get_Nz()/2) {
@@ -86,7 +86,7 @@ void Integrator::update(int i, int j, int k)
 }
 
 
-void Integrator::update_real(int i, int j, int k)
+void Integrator::integrate_real(int i, int j, int k)
 {
 
   if (i + local0start > fourier.get_Nz()/2) {

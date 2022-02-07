@@ -15,7 +15,6 @@ private:
 
   double qx,qy,qz,q2;
 
-  const GridData fourier;
 
   const int seed;
 
@@ -38,6 +37,9 @@ private:
 
   
 public:
+
+  const GridData fourier;
+
   void ode(std::complex<double> &, std::complex<double>,
 	   std::complex<double>, double);
   Integrator(MPI_Comm,const GridData&,const int,
@@ -56,8 +58,8 @@ public:
 
   double get_dt() { return dt; };
   
-  void update(int , int , int);
-  void update_real(int , int , int);
+  void integrate(int , int , int);
+  void integrate_real(int , int , int);
 };
 
 #endif

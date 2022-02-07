@@ -117,7 +117,7 @@ void ConjPlane::single(Integrator & integrator,int nx)
   int nz = 0;
   for (int j = 1; j < cNy/2; j++) {
     
-    integrator.update(nz,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.integrate(nz,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
     integrator.ft_phi(nz,cNy-j,nx) = std::conj(integrator.ft_phi(nz,j,nx));
 					     
   }
@@ -128,7 +128,7 @@ void ConjPlane::single(Integrator & integrator,int nx)
     
     for (int j = 1; j < cNy/2; j++) {
       
-      integrator.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.integrate(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       integrator.ft_phi(cNz-i,cNy-j,nx) = std::conj(integrator.ft_phi(i,j,nx));
       
     }
@@ -136,7 +136,7 @@ void ConjPlane::single(Integrator & integrator,int nx)
   // write bottom right square to top left square where possible
   for (int i = cNz/2+1; i < cNz; i++) {
     for (int j = 1; j < cNy/2; j++ ) {
-      integrator.update(i,j,nx);
+      integrator.integrate(i,j,nx);
       integrator.ft_phi(cNz-i,cNy-j,nx) = std::conj(integrator.ft_phi(i,j,nx));
     }
   }
@@ -148,7 +148,7 @@ void ConjPlane::single(Integrator & integrator,int nx)
   
   for (int j = 1; j < cNy/2; j++) {
     
-    integrator.update(nz,j,nx);//1.0*(nz+complex_local) + 1i*(1.0*j);
+    integrator.integrate(nz,j,nx);//1.0*(nz+complex_local) + 1i*(1.0*j);
     integrator.ft_phi(nz,cNy-j,nx) = std::conj(integrator.ft_phi(nz,j,nx));
     
   }
@@ -169,7 +169,7 @@ void ConjPlane::line_single(Integrator & integrator,int nx)
   int ny = 0;
   // write bottom left square to bottom right square where possible
   for (int i = 1; i < cNz/2; i++) {
-    integrator.update(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.integrate(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
     integrator.ft_phi(cNz-i,ny,nx) = std::conj(integrator.ft_phi(i,ny,nx));
       
   }
@@ -177,7 +177,7 @@ void ConjPlane::line_single(Integrator & integrator,int nx)
   
   // write top right square to top left square where possible
   for (int i = cNz/2+1; i < cNz; i++) {
-    integrator.update(i,ny,nx);
+    integrator.integrate(i,ny,nx);
     integrator.ft_phi(cNz-i,ny,nx) = std::conj(integrator.ft_phi(i,ny,nx));
   }
 
@@ -200,7 +200,7 @@ void ConjPlane::first(Integrator & integrator,int nx)
   int nz = 0;
   for (int j = 1; j < cNy/2; j++) {
     
-    integrator.update(nz,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.integrate(nz,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
     integrator.ft_phi(nz,cNy-j,nx) = std::conj(integrator.ft_phi(nz,j,nx));
 					     
   }
@@ -211,7 +211,7 @@ void ConjPlane::first(Integrator & integrator,int nx)
 
     for (int j = 1; j < cNy/2; j++) {
 
-      integrator.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.integrate(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
       
       
@@ -258,7 +258,7 @@ void ConjPlane::last(Integrator & integrator,int nx)
     for (int j = 1; j < cNy/2; j++) {
       
       
-      integrator.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.integrate(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
       
       
@@ -342,7 +342,7 @@ void ConjPlane::line_first(Integrator &integrator, int nx)
   for (int i = 1; i < cNz; i++) {
 
     
-    integrator.update(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.integrate(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
     //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
       
       
@@ -382,7 +382,7 @@ void ConjPlane::line_last(Integrator & integrator,int nx)
   
   // send from far right corner of bottom right square
   for (int i = 0; i < line2.axis_size(0); i++) {
-    integrator.update(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.integrate(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
     //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
 
     line2(line2.axis_size(0)-i-1,0) = std::conj(integrator.ft_phi(i,ny,nx));
@@ -476,7 +476,7 @@ void ConjPlane::lefthalf_equal(Integrator & integrator,int nx)
   int nz = 0;
   for (int j = 1; j < cNy/2; j++) {
     
-    integrator.update(nz,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.integrate(nz,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
     //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
     
     block0(nz,block0.axis_size(1)-j) = std::conj(integrator.ft_phi(nz,j,nx));
@@ -492,7 +492,7 @@ void ConjPlane::lefthalf_equal(Integrator & integrator,int nx)
     
     for (int j = 1; j < cNy/2; j++ ) {
       
-      integrator.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.integrate(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       block1(block1.axis_size(0)-i,block1.axis_size(1)-j)
 	= std::conj(integrator.ft_phi(i,j,nx));
       
@@ -590,7 +590,7 @@ void ConjPlane::righthalf_equal(Integrator & integrator,int nx)
   for (int j = 1; j < cNy/2; j++) {
       
     
-    integrator.update(nz,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.integrate(nz,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
     
     
@@ -606,7 +606,7 @@ void ConjPlane::righthalf_equal(Integrator & integrator,int nx)
   for (int i = 1; i < cNz; i++) {
     for (int j = 1; j < cNy/2; j++) {
       
-      integrator.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.integrate(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       
       block3(block3.axis_size(0)-i,block3.axis_size(1)-j)
 	= std::conj(integrator.ft_phi(i,j,nx));
@@ -705,7 +705,7 @@ void ConjPlane::middle_odd_equal(Integrator & integrator,int nx)
   int nz = 0;
   for (int j = 1; j < cNy/2; j++) {
     
-    integrator.update(nz,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.integrate(nz,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
     //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
     
     block0(nz,block0.axis_size(1)-j) = std::conj(integrator.ft_phi(nz,j,nx));
@@ -737,7 +737,7 @@ void ConjPlane::middle_odd_equal(Integrator & integrator,int nx)
     for (int j = 1; j < cNy/2; j++) {
       
       
-      integrator.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.integrate(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       integrator.ft_phi(cNz-i,cNy-j,nx) = std::conj(integrator.ft_phi(i,j,nx));
       
     }
@@ -745,7 +745,7 @@ void ConjPlane::middle_odd_equal(Integrator & integrator,int nx)
   // write bottom right square to top left square where possible
   for (int i = (block1.axis_size(0)-1)/2 + 2; i < cNz; i++) {
     for (int j = 1; j < cNy/2; j++ ) {
-      integrator.update(i,j,nx);
+      integrator.integrate(i,j,nx);
       integrator.ft_phi(cNz-i,cNy-j,nx) = std::conj(integrator.ft_phi(i,j,nx));
     }
   }
@@ -757,7 +757,7 @@ void ConjPlane::middle_odd_equal(Integrator & integrator,int nx)
   
   for (int j = 1; j < cNy/2; j++) {
     
-    integrator.update(nz,j,nx);//1.0*(nz+complex_local) + 1i*(1.0*j);
+    integrator.integrate(nz,j,nx);//1.0*(nz+complex_local) + 1i*(1.0*j);
     integrator.ft_phi(nz,cNy-j,nx) = std::conj(integrator.ft_phi(nz,j,nx));
     
   }
@@ -783,7 +783,7 @@ void ConjPlane::middle_even_equal(Integrator & integrator,int nx)
   
   for (int j = 1; j < cNy/2; j++) {
     
-    integrator.update(nz,j,nx);//1.0*(nz+complex_local) + 1i*(1.0*j);
+    integrator.integrate(nz,j,nx);//1.0*(nz+complex_local) + 1i*(1.0*j);
     integrator.ft_phi(nz,cNy-j,nx) = std::conj(integrator.ft_phi(nz,j,nx));
     
   }
@@ -795,7 +795,7 @@ void ConjPlane::middle_even_equal(Integrator & integrator,int nx)
   for (int i = 1; i < cNz; i++) {
     for (int j = 1; j < cNy/2; j++) {
       
-      integrator.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.integrate(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       
       block3(block3.axis_size(0)-i,block3.axis_size(1)-j)
 	= std::conj(integrator.ft_phi(i,j,nx));
@@ -843,7 +843,7 @@ void ConjPlane::lefthalf_unequal(Integrator & integrator,int nx)
     int nz = 0;
     for (int j = 1; j < cNy/2; j++) {
     
-      integrator.update(nz,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.integrate(nz,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       integrator.ft_phi(nz,cNy-j,nx) = std::conj(integrator.ft_phi(nz,j,nx));
       
     }
@@ -858,7 +858,7 @@ void ConjPlane::lefthalf_unequal(Integrator & integrator,int nx)
     for (int j = 1; j < cNy/2; j++) {
       
       
-      integrator.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.integrate(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
 
       block0(block0.axis_size(0)-i-(1-loopstart),block0.axis_size(1)-j) = std::conj(integrator.ft_phi(i,j,nx));
@@ -874,7 +874,7 @@ void ConjPlane::lefthalf_unequal(Integrator & integrator,int nx)
     
     for (int j = 1; j < cNy/2; j++ ) {
       
-      integrator.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.integrate(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       block1(block1.axis_size(0)-(i-block0.axis_size(0)+1-loopstart),block1.axis_size(1)-j)
 	= std::conj(integrator.ft_phi(i,j,nx));
       
@@ -974,7 +974,7 @@ void ConjPlane::righthalf_unequal(Integrator & integrator,int nx)
     for (int j = 1; j < cNy/2; j++) {
       
       
-      integrator.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.integrate(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
       
       
@@ -990,7 +990,7 @@ void ConjPlane::righthalf_unequal(Integrator & integrator,int nx)
   for (int i = block2.axis_size(0); i < cNz; i++) {
     for (int j = 1; j < cNy/2; j++) {
       
-      integrator.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.integrate(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       
       block3(block3.axis_size(0)-(i-block2.axis_size(0)+1),block3.axis_size(1)-j)
 	= std::conj(integrator.ft_phi(i,j,nx));
@@ -1087,7 +1087,7 @@ void ConjPlane::middle_odd_unequal(Integrator & integrator,int nx)
     for (int j = 1; j < cNy/2; j++) {
       
       
-      integrator.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.integrate(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       integrator.ft_phi(cNz-i-block1.axis_size(0)-1,cNy-j,nx) = std::conj(integrator.ft_phi(i,j,nx));
       
     }
@@ -1096,7 +1096,7 @@ void ConjPlane::middle_odd_unequal(Integrator & integrator,int nx)
     for (int j = cNy/2 + 1; j < cNy; j++) {
       
       // since conjugatation for top, change expression for ft_phi
-      ft_phi(i,j,nx) = std::conj(integrator.update(nz,Ny-j,nx,ft_phi));//1.0*(Nz-i-complex_local)-1i*(1.0*(Ny-j));
+      ft_phi(i,j,nx) = std::conj(integrator.integrate(nz,Ny-j,nx,ft_phi));//1.0*(Nz-i-complex_local)-1i*(1.0*(Ny-j));
       ft_phi(cNz-i-block1.axis_size(0)-1,cNy-j,nx) = std::conj(ft_phi(i,j,nx));
       
       }*/
@@ -1104,7 +1104,7 @@ void ConjPlane::middle_odd_unequal(Integrator & integrator,int nx)
   // write bottom right square to top left square where possible
   for (int i = (block0.axis_size(0)-1)/2 + 1; i < block0.axis_size(0); i++) {
     for (int j = 1; j < cNy/2; j++ ) {
-      integrator.update(i,j,nx);
+      integrator.integrate(i,j,nx);
       integrator.ft_phi(cNz-i-block1.axis_size(0)-1,cNy-j,nx) = std::conj(integrator.ft_phi(i,j,nx));
     }
   }
@@ -1116,7 +1116,7 @@ void ConjPlane::middle_odd_unequal(Integrator & integrator,int nx)
   
   for (int j = 1; j < cNy/2; j++) {
     
-    integrator.update(nz,j,nx);//1.0*(nz+complex_local) + 1i*(1.0*j);
+    integrator.integrate(nz,j,nx);//1.0*(nz+complex_local) + 1i*(1.0*j);
     integrator.ft_phi(nz,cNy-j,nx) = std::conj(integrator.ft_phi(nz,j,nx));
     
   }
@@ -1127,7 +1127,7 @@ void ConjPlane::middle_odd_unequal(Integrator & integrator,int nx)
     
     for (int j = 1; j < cNy/2; j++) {
       
-      integrator.update(i,j,nx);//1.0*(i+complex_local) + 1i*(1.0*j);
+      integrator.integrate(i,j,nx);//1.0*(i+complex_local) + 1i*(1.0*j);
       block3(cNz-i-1,block3.axis_size(1)-j) = std::conj(integrator.ft_phi(i,j,nx));
     }
     
@@ -1173,7 +1173,7 @@ void ConjPlane::middle_even_unequal(Integrator & integrator,int nx)
     for (int j = 1; j < cNy/2; j++) {
       
       
-      integrator.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.integrate(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
 
       block0(block0.axis_size(0)-i-1,block0.axis_size(1)-j) = std::conj(integrator.ft_phi(i,j,nx));
@@ -1190,7 +1190,7 @@ void ConjPlane::middle_even_unequal(Integrator & integrator,int nx)
 
     for (int j = 1; j < cNy/2; j++) {
 
-      integrator.update(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+      integrator.integrate(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       integrator.ft_phi(cNz-(i-block0.axis_size(0))-1,cNy-j,nx) = std::conj(integrator.ft_phi(i,j,nx));
 
     }
@@ -1199,7 +1199,7 @@ void ConjPlane::middle_even_unequal(Integrator & integrator,int nx)
   // write bottom right to top left in the same processor where possible
   for (int i = block0.axis_size(0)+(block1.axis_size(0)-1)/2+1; i < cNz; i++) {
     for (int j = 1; j < cNy/2; j++ ) {
-      integrator.update(i,j,nx);
+      integrator.integrate(i,j,nx);
       integrator.ft_phi(cNz-(i-block0.axis_size(0))-1,cNy-j,nx) = std::conj(integrator.ft_phi(i,j,nx));
     }
   }
@@ -1210,7 +1210,7 @@ void ConjPlane::middle_even_unequal(Integrator & integrator,int nx)
   
   for (int j = 1; j < cNy/2; j++) {
     
-    integrator.update(nz,j,nx);//1.0*(nz+complex_local) + 1i*(1.0*j);
+    integrator.integrate(nz,j,nx);//1.0*(nz+complex_local) + 1i*(1.0*j);
     integrator.ft_phi(nz,cNy-j,nx) = std::conj(integrator.ft_phi(nz,j,nx));
     
   }
@@ -1249,7 +1249,7 @@ void ConjPlane::line_lefthalf_equal(Integrator & integrator,int nx)
   int nz = 0;
   int ny = 0;
     
-  integrator.update(nz,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+  integrator.integrate(nz,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
   //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
     
   line0(0,0) = std::conj(integrator.ft_phi(nz,ny,nx));
@@ -1261,7 +1261,7 @@ void ConjPlane::line_lefthalf_equal(Integrator & integrator,int nx)
   
   for (int i = 1; i < cNz ; i++) {
     
-    integrator.update(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.integrate(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
     line1(line1.axis_size(0)-i,0)
       = std::conj(integrator.ft_phi(i,ny,nx));
   }
@@ -1335,7 +1335,7 @@ void ConjPlane::line_righthalf_equal(Integrator & integrator,int nx)
 
   int nz = 0;
 
-  integrator.update(nz,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+  integrator.integrate(nz,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
   //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
     
     
@@ -1349,7 +1349,7 @@ void ConjPlane::line_righthalf_equal(Integrator & integrator,int nx)
     
   for (int i = 1; i < cNz; i++) {
     
-    integrator.update(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.integrate(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       
     line3(line3.axis_size(0)-i,0)
       = std::conj(integrator.ft_phi(i,ny,nx));
@@ -1426,7 +1426,7 @@ void ConjPlane::line_middle_odd_equal(Integrator & integrator,int nx)
 
   // send one to next processor
 
-  integrator.update(nz,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+  integrator.integrate(nz,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
   //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
     
   line0(nz,0) = std::conj(integrator.ft_phi(nz,ny,nx));
@@ -1450,7 +1450,7 @@ void ConjPlane::line_middle_odd_equal(Integrator & integrator,int nx)
   // write bottom left square to bottom right square where possible
   for (int i = 1; i < (line1.axis_size(0)-1)/2+1; i++) {
   
-    integrator.update(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.integrate(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
     integrator.ft_phi(cNz-i,ny,nx) = std::conj(integrator.ft_phi(i,ny,nx));
       
   }
@@ -1459,7 +1459,7 @@ void ConjPlane::line_middle_odd_equal(Integrator & integrator,int nx)
   // write top right square to top left square where possible
   for (int i = (line1.axis_size(0)-1)/2 + 2; i < cNz; i++) {
 
-    integrator.update(i,ny,nx);
+    integrator.integrate(i,ny,nx);
     integrator.ft_phi(cNz-i,ny,nx) = std::conj(integrator.ft_phi(i,ny,nx));
 
   }
@@ -1487,7 +1487,7 @@ void ConjPlane::line_middle_even_equal(Integrator & integrator,int nx)
   // fill and send top right square 
     
   for (int i = 1; i < cNz; i++) {
-    integrator.update(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.integrate(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       
     line3(line3.axis_size(0)-i,0)
 	= std::conj(integrator.ft_phi(i,ny,nx));
@@ -1528,7 +1528,7 @@ void ConjPlane::line_lefthalf_unequal(Integrator & integrator,int nx)
   
   for (int i = loopstart; i < line0.axis_size(0)+loopstart; i++) {
 
-    integrator.update(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.integrate(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
     //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
 
     line0(line0.axis_size(0)-i-(1-loopstart),0) = std::conj(integrator.ft_phi(i,ny,nx));
@@ -1540,7 +1540,7 @@ void ConjPlane::line_lefthalf_unequal(Integrator & integrator,int nx)
   
   for (int i = line0.axis_size(0)+loopstart; i < cNz ; i++) {
 
-    integrator.update(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.integrate(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
     line1(line1.axis_size(0)-(i-line0.axis_size(0)+1-loopstart),0)
       = std::conj(integrator.ft_phi(i,ny,nx));
   }
@@ -1621,7 +1621,7 @@ void ConjPlane::line_righthalf_unequal(Integrator & integrator,int nx)
   // write and send top right line (1 <= y < Nz/2, z = cNy/2)
   
   for (int i = 0; i < line2.axis_size(0); i++) {
-    integrator.update(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.integrate(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
     //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
 
     line2(line2.axis_size(0)-i-1,0) = std::conj(integrator.ft_phi(i,ny,nx));
@@ -1634,7 +1634,7 @@ void ConjPlane::line_righthalf_unequal(Integrator & integrator,int nx)
     
   for (int i = line2.axis_size(0); i < cNz; i++) {
       
-    integrator.update(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.integrate(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       
     line3(line3.axis_size(0)-(i-line2.axis_size(0)+1),0)
       = std::conj(integrator.ft_phi(i,ny,nx));
@@ -1714,7 +1714,7 @@ void ConjPlane::line_middle_odd_unequal(Integrator & integrator,int nx)
   // write bottom left square to bottom right square where possible
   for (int i = 0; i < (line0.axis_size(0)-1)/2; i++) {
     
-    integrator.update(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.integrate(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
     integrator.ft_phi(cNz-i-line1.axis_size(0)-1,ny,nx) = std::conj(integrator.ft_phi(i,ny,nx));
       
   }
@@ -1723,7 +1723,7 @@ void ConjPlane::line_middle_odd_unequal(Integrator & integrator,int nx)
 
   ny = cNy/2;
   for (int i = (line0.axis_size(0)-1)/2 + 1; i < line0.axis_size(0); i++) {
-    integrator.update(i,ny,nx);
+    integrator.integrate(i,ny,nx);
     integrator.ft_phi(cNz-i-line1.axis_size(0)-1,ny,nx) = std::conj(integrator.ft_phi(i,ny,nx));
   }
 
@@ -1733,7 +1733,7 @@ void ConjPlane::line_middle_odd_unequal(Integrator & integrator,int nx)
   ny = cNy/2;
   
   for (int i = cNz-line3.axis_size(0); i < cNz; i++) {
-    integrator.update(i,ny,nx);//1.0*(i+complex_local) + 1i*(1.0*j);
+    integrator.integrate(i,ny,nx);//1.0*(i+complex_local) + 1i*(1.0*j);
     line3(cNz-i-1,0) = std::conj(integrator.ft_phi(i,ny,nx));
   }
   
@@ -1766,7 +1766,7 @@ void ConjPlane::line_middle_even_unequal(Integrator & integrator,int nx)
   // write bottom left and send to next processor
   for (int i = 0; i < line0.axis_size(0); i++) {
       
-    integrator.update(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.integrate(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
 
 
     line0(line0.axis_size(0)-i-1,0) = std::conj(integrator.ft_phi(i,ny,nx));
@@ -1780,14 +1780,14 @@ void ConjPlane::line_middle_even_unequal(Integrator & integrator,int nx)
 
   // write bottom left to bottom right in same processor where possible
   for (int i = line0.axis_size(0); i < line0.axis_size(0)+(line1.axis_size(0)-1)/2; i++) {
-    integrator.update(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
+    integrator.integrate(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
     integrator.ft_phi(cNz-(i-line0.axis_size(0))-1,ny,nx) = std::conj(integrator.ft_phi(i,ny,nx));
   }
 
   ny = cNy/2;
   // write top right to top left in the same processor where possible
   for (int i = line0.axis_size(0)+(line1.axis_size(0)-1)/2+1; i < cNz; i++) {
-    integrator.update(i,ny,nx);
+    integrator.integrate(i,ny,nx);
     integrator.ft_phi(cNz-(i-line0.axis_size(0))-1,ny,nx) = std::conj(integrator.ft_phi(i,ny,nx));
   }
 
