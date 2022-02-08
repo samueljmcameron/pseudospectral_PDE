@@ -10,7 +10,7 @@
 /* Simple function to write a vtk file with binary data. */
 void ioVTK::writeVTKImageData(std::string fname,
 			      const std::vector<ft_dub*> scalar_outputs,
-			      GridData grid)
+			      const GridData& grid)
 /*============================================================================*/
 /*
   Write scalar image data to a vtk (and paraview) compatible file
@@ -164,7 +164,7 @@ void ioVTK::restartVTKcollection(std::string& oldfname)
 
 /* Simple function to write a vtk file with binary data. */
 void ioVTK::readVTKImageData(std::vector<ft_dub*> scalar_outputs,
-			     std::string fname, GridData grid)
+			     std::string fname, const GridData& grid)
 /*============================================================================*/
 /*
   Write scalar image data to a vtk (and paraview) compatible file

@@ -1,5 +1,5 @@
 #include <iostream>
-#include <cmath>
+#include <map>
 #include <complex>
 
 
@@ -11,14 +11,12 @@
 #include "iovtk.hpp"
 #include "solutionparams.hpp"
 #include "timestep.hpp"
+#include "globalparams.hpp"
 
-int main()
+
+int main(int argc, char **argv)
 {
 
-  GridData realspace(64,100.0);
-  GridData fourier = realspace.fft_grid();
-
-  fourier.transpose_yz();
   
 
   MPI_Comm comm = MPI_COMM_WORLD;
@@ -35,16 +33,95 @@ int main()
   ierr = MPI_Comm_rank(comm,&id);
 
   fftw_mpi_init();
+
+
+
+
+
+  std::ifstream infile;
+
+  std::map<std::string,std::string> variables;
+
+  std::string simulation_type = "run";
+
+  int iarg = 1;  
+  while(iarg < argc) {
+    if (strcmp(argv[iarg],"-in") == 0) {
+      if (iarg+1 == argc) {
+	std::cerr << "Error: input flag '-in' specified, but no file given."
+		  << std::endl;
+	return EXIT_FAILURE;
+      }
+      infile.open(argv[iarg+1]);
+      iarg += 2;
+      
+    } else if (strcmp(argv[iarg],"-var") == 0) {
+      
+      if (iarg + 2 >= argc) {
+	std::cerr << "Error: invalid command line variable specification."
+		  << std::endl;
+	return EXIT_FAILURE;
+      }
+      variables[argv[iarg+1]] = argv[iarg+2];
+      iarg += 3;
+    } else {
+      std::cerr << "Error: invalid command line variable specification."
+		<< std::endl;
+      return EXIT_FAILURE;
+    }
+  }
+
   
-  fftw_MPI_3Darray<double> phi(comm,"concentration",realspace);
-  fftw_MPI_3Darray<double> nonlinear(comm,"chempotential",realspace);
+  if (not infile.is_open()) {
+    std::cerr << "Error: need to specify input file." << std::endl;
+    return EXIT_FAILURE;
+  }
 
-  int baseseed = 129480;
-  RandomPll rpll(comm,id,baseseed,mpi_size);
+  std::string line;
+  std::vector<std::string> splitvec;
+    
+  GlobalParams gp(comm,id,mpi_size,infile,variables,line);
+
+
+
+  line = line.substr(0,line.find_first_of("#"));
+  splitvec = input::split_line(line);
   
-  double dt = 1e-4;
+
+  while (std::getline(infile,line) &&
+	 splitvec[0] != "build_solution") {
+
+    line = line.substr(0,line.find_first_of("#"));
+    splitvec = input::split_line(line);
+    
+  }
+
+  splitvec.erase(splitvec.begin());
+
+  for (auto &c : splitvec)
+    input::convertVariable(c,variables);
+  
+  
+  SolutionParams solparams(splitvec);
 
 
+  if (id == 0) {
+    gp.printall();
+    solparams.printall();
+  }
+
+  
+
+  fftw_MPI_3Darray<double> phi(gp.comm,"concentration",gp.realspace);
+  fftw_MPI_3Darray<double> nonlinear(gp.comm,"chempotential",gp.realspace);
+
+
+  //  int baseseed = 129480;
+  RandomPll rpll(gp.comm,gp.id,gp.seed,gp.mpi_size);
+  
+  //  double dt = 1e-4;
+
+  /*
   std::vector<std::string> splitvec;
 
   splitvec.push_back("mobility");
@@ -64,14 +141,14 @@ int main()
     solparams.printall();
   }
   
-
+  */
   
-  Integrator integrator(comm,fourier,rpll.get_processor_seed(),solparams,dt);
+  Integrator integrator(gp.comm,gp.fourier,rpll.get_processor_seed(),solparams,gp.dt);
 
 
 
-  double volfrac = 0.3;
-  double variance = 0.0;
+  //  double volfrac = 0.3;
+  //  double variance = 0.0;
 
 
 
@@ -81,73 +158,74 @@ int main()
   fftw_plan forward_nonlinear, backward_nonlinear;
 
   
-  forward_phi = fftw_mpi_plan_dft_r2c_3d(realspace.get_Nz(),realspace.get_Ny(),
-					 realspace.get_Nx(),
+  forward_phi = fftw_mpi_plan_dft_r2c_3d(gp.realspace.get_Nz(),gp.realspace.get_Ny(),
+					 gp.realspace.get_Nx(),
 					 phi.data(),
 					 reinterpret_cast<fftw_complex*>
 					 (integrator.ft_phi.data()),
-					 comm, FFTW_MPI_TRANSPOSED_OUT);
+					 gp.comm, FFTW_MPI_TRANSPOSED_OUT);
   
-  backward_phi = fftw_mpi_plan_dft_c2r_3d(realspace.get_Nz(),realspace.get_Ny(),
-					  realspace.get_Nx(),
+  backward_phi = fftw_mpi_plan_dft_c2r_3d(gp.realspace.get_Nz(),gp.realspace.get_Ny(),
+					  gp.realspace.get_Nx(),
 					  reinterpret_cast<fftw_complex*>
 					  (integrator.ft_phi.data()),
-					  phi.data(),comm,FFTW_MPI_TRANSPOSED_IN);
+					  phi.data(),gp.comm,FFTW_MPI_TRANSPOSED_IN);
 
-  forward_nonlinear = fftw_mpi_plan_dft_r2c_3d(realspace.get_Nz(),realspace.get_Ny(),
-					       realspace.get_Nx(),
+  forward_nonlinear = fftw_mpi_plan_dft_r2c_3d(gp.realspace.get_Nz(),gp.realspace.get_Ny(),
+					       gp.realspace.get_Nx(),
 					       nonlinear.data(),
 					       reinterpret_cast<fftw_complex*>
 					       (integrator.ft_nonlinear.data()),
-					       comm, FFTW_MPI_TRANSPOSED_OUT);
+					       gp.comm, FFTW_MPI_TRANSPOSED_OUT);
   
-  backward_nonlinear = fftw_mpi_plan_dft_c2r_3d(realspace.get_Nz(),realspace.get_Ny(),
-						realspace.get_Nx(),
+  backward_nonlinear = fftw_mpi_plan_dft_c2r_3d(gp.realspace.get_Nz(),gp.realspace.get_Ny(),
+						gp.realspace.get_Nx(),
 						reinterpret_cast<fftw_complex*>
 						(integrator.ft_nonlinear.data()),
-						nonlinear.data(),comm,
+						nonlinear.data(),gp.comm,
 						FFTW_MPI_TRANSPOSED_IN);
   
 
-  integrator.initialize(phi,volfrac,variance);
+  integrator.initialize(phi,gp.volFrac,gp.variance);
 
-  int numsteps = 20;
-  int startstep = 0;
+  //  int numsteps = 20;
+  //  int startstep = 0;
 
   double t = 0;
 
-  std::string fname = std::string("data/test") + std::string("_p") + std::to_string(id) ;
-  std::string fname_p = fname + std::string("_") +  std::to_string(startstep) +  std::string(".vti");
+  std::string fname = gp.dump_file + std::string("_p") + std::to_string(gp.id) ;
+  std::string fname_p = fname + std::string("_") +  std::to_string(gp.startstep) +  std::string(".vti");
 
-  bool restart_flag = false;
+
   
   
-  if (restart_flag) {
-    ioVTK::readVTKImageData({&phi},fname_p,realspace);
+  if (gp.restart_flag) {
+    ioVTK::readVTKImageData({&phi},fname_p,gp.realspace);
   } else {
-    ioVTK::writeVTKImageData(fname_p,{&phi},realspace);
+    ioVTK::writeVTKImageData(fname_p,{&phi},gp.realspace);
     
   }
 
-  TimeStep timestep(comm,mpi_size,id,fourier.get_Nz(),fourier.get_Ny());
+  TimeStep timestep(gp.comm,gp.mpi_size,gp.id,gp.fourier.get_Nz(),gp.fourier.get_Ny());
   
-  for (int it = 1+startstep; it <= numsteps+startstep; it ++) {
+  for (int it = 1+gp.startstep; it <= gp.steps+gp.startstep; it ++) {
     t += integrator.get_dt();
-    std::cout << "id " << id << " is on t = " << t << std::endl;
+    std::cout << "id " << gp.id << " is on t = " << t << std::endl;
     integrator.nonlinear(nonlinear,phi); // compute nl(t) given phi(t)
     
     fftw_execute(forward_phi);
     fftw_execute(forward_nonlinear);
 
-    timestep.update(t,integrator);    
+    timestep.update(t,integrator);
+    
 
     fftw_execute(backward_phi); // get phi(t+dt)
 
-    if (it % 1 == 0) {
+    if (it % gp.dump_every == 0) {
 
       fname_p = fname + std::string("_") +  std::to_string(it) +  std::string(".vti");
       
-      ioVTK::writeVTKImageData(fname_p,{&phi},realspace);
+      ioVTK::writeVTKImageData(fname_p,{&phi},gp.realspace);
     }
   }
 

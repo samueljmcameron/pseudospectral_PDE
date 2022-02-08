@@ -32,7 +32,6 @@ TimeStep::~TimeStep()
 void TimeStep::update(double t,Integrator &integrator)
 {
 
-  int global_fftNz = integrator.ft_phi.get_globalNz();
   int local_fftNz = integrator.ft_phi.axis_size(0);
   int local_fftNy = integrator.ft_phi.axis_size(1);
   int local_fftNx = integrator.ft_phi.axis_size(2);  

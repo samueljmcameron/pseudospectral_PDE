@@ -1,9 +1,11 @@
 #include "randompll.hpp"
 
 RandomPll::RandomPll(MPI_Comm comm, const int id, const int seed, const int numprocs)
-  : comm(comm),id(id),seed(seed), gen(seed), integer_dist(), processor_seeds(numprocs)
+  : comm(comm),id(id),seed(seed), integer_dist(), processor_seeds(numprocs)
 {
 
+  gen.seed(seed);
+  
   if (id == 0) {
     for (int i = 0; i < numprocs; i++) {
       processor_seeds[i] = integer_dist(gen);

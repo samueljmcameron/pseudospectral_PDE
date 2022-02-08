@@ -6,19 +6,21 @@ using namespace std::complex_literals;
 Integrator::Integrator(MPI_Comm comm,const GridData& fourier, const int seed,
 		       const SolutionParams& solparams,const double dt)
   : ft_phi(comm,"ft_phi",fourier), ft_nonlinear(comm,"ft_nl",fourier),
-    fourier(fourier),seed(seed),gen(seed),
+    fourier(fourier),seed(seed),
     real_dist(-0.5,0.5),mobility(solparams.mobility),gamma(solparams.gamma),
     temp(solparams.temp),chi(solparams.chi), volFH(solparams.volFH),
     dt(dt),normalization(sqrt(1.0/(fourier.get_Nx()*fourier.get_Ny()*fourier.get_Nz())))
 {
 
+  gen.seed(seed);
   double tmp = fourier.get_dx()*fourier.get_dy()*fourier.get_dz()/(2*M_PI*2*M_PI*2*M_PI);
   local0start = ft_phi.get_local0start();
   complexprefactor = sqrt(12*temp*mobility*tmp);
   realprefactor = sqrt(24*temp*mobility*tmp);
   sqrtdt = sqrt(dt);
 
-  std::cout << (fourier.get_dz()*fourier.get_dz()*fourier.get_Nz()/2*fourier.get_Nz()/2+fourier.get_dy()*fourier.get_dy()*fourier.get_Ny()/2*fourier.get_Ny()/2+fourier.get_dx()*fourier.get_dx()*fourier.get_Nx()/2*fourier.get_Nx()/2) << std::endl;
+  //  std::cout << (fourier.get_dz()*fourier.get_dz()*fourier.get_Nz()/2*fourier.get_Nz()/2+fourier.get_dy()*fourier.get_dy()*fourier.get_Ny()/2*fourier.get_Ny()/2+fourier.get_dx()*fourier.get_dx()*fourier.get_Nx()/2*fourier.get_Nx()/2) << std::endl;
+  std::cout << "RN : " << real_dist(gen) << std::endl;
   
 }
 
