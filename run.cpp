@@ -15,6 +15,7 @@ void run(GlobalParams gp, SolutionParams solparams) {
   fftw_MPI_3Darray<double> phi(gp.comm,"concentration",gp.realspace);
   fftw_MPI_3Darray<double> nonlinear(gp.comm,"chempotential",gp.realspace);
 
+  std::cout << gp.id << "," << phi.axis_size(0) << std::endl;
   RandomPll rpll(gp.comm,gp.id,gp.seed,gp.mpi_size);
   
   Integrator integrator(gp.comm,gp.fourier,rpll.get_processor_seed(),solparams,gp.dt);
@@ -114,7 +115,8 @@ void run(GlobalParams gp, SolutionParams solparams) {
 
 
   
-  TimeStep timestep(gp.comm,gp.mpi_size,gp.id,gp.fourier.get_Nz(),gp.fourier.get_Ny());
+  TimeStep timestep(gp.comm,gp.mpi_size,gp.id,integrator.ft_phi.axis_size(0),
+		    integrator.ft_phi.axis_size(1));
   
   for (int it = 1+gp.startstep; it <= gp.steps+gp.startstep; it ++) {
     t += integrator.get_dt();
