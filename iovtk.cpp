@@ -1,6 +1,7 @@
 #include <stdexcept>
 #include <fstream>
-#include <complex>
+
+#include <algorithm>
 
 #include "iovtk.hpp"
 
@@ -53,6 +54,12 @@ void ioVTK::writeVTKImageData(std::string fname,
   
   
   auto myfile = std::fstream(fname, std::ios::out | std::ios::binary);
+
+  if (not myfile.is_open()) {
+    throw std::runtime_error(std::string("Cannot open file ") + fname);
+  }
+
+  
   myfile << "<?xml version=\"1.0\"?>" << std::endl
 	 << "<VTKFile type=\"ImageData\"  version=\"1.0\""
 	 << " byte_order=\"LittleEndian\">" << std::endl
@@ -102,6 +109,10 @@ void ioVTK::writeVTKImageData(std::string fname,
 void ioVTK::writeVTKcollectionHeader(const std::string fname)
 {
   auto myfile = std::ofstream(fname);
+  if (not myfile.is_open()) {
+    throw std::runtime_error(std::string("Cannot open file ") + fname);
+  }
+  
   myfile << "<?xml version=\"1.0\"?>" << std::endl
 	 << "<VTKFile type=\"Collection\"  version=\"1.0\""
 	 << " byte_order=\"LittleEndian\">" << std::endl
@@ -118,9 +129,19 @@ void ioVTK::writeVTKcollectionMiddle(const std::string collectionfname,
 				     const double time)
 {
 
+  size_t num_slashes = std::count(collectionfname.begin(), collectionfname.end(), '/');
+
+  std::string prepath = "";
+  for (int i = 0; i < num_slashes; i++)
+    prepath += std::string("../");
+  
   auto myfile = std::fstream(collectionfname,std::ios_base::app);
+  if (not myfile.is_open()) {
+    throw std::runtime_error(std::string("Cannot open file ") + collectionfname);
+  }
+  
   myfile << "<DataSet timestep=\"" << time << "\" group=\"\" part=\"0\""
-	 << " file=\"" << filename << "\"/>" << std::endl;
+	 << " file=\"" << prepath+filename << "\"/>" << std::endl;
 
   myfile.close();
   
@@ -130,32 +151,50 @@ void ioVTK::writeVTKcollectionMiddle(const std::string collectionfname,
 void ioVTK::writeVTKcollectionFooter(const std::string fname)
 {
   auto myfile = std::fstream(fname, std::ios_base::app);
-
+  if (not myfile.is_open()) {
+    throw std::runtime_error(std::string("Cannot open file ") + fname);
+  }
+  
   myfile << "</Collection>" << std::endl
 	 << "</VTKFile>";
   
   myfile.close();
 }
 
-void ioVTK::restartVTKcollection(std::string& oldfname)
+void ioVTK::restartVTKcollection(const std::string fname)
 /* restart the collection by copying the current file (up to the collection
    end) into a new file called "restart" + oldfname. */
    
 {
-  auto oldfile = std::ifstream(oldfname);
-  oldfname = std::string("restart") + oldfname;
+
+  auto oldfile = std::ifstream(fname);
+  if (not oldfile.is_open()) {
+    throw std::runtime_error(std::string("Cannot open file ") + fname);
+  }
 
 
-  auto newfile = std::ofstream(oldfname);
-
+  std::vector<std::string> lines;
   std::string stopline = "";
 
   while (stopline != "</Collection>") {
-    newfile << stopline;
+    lines.push_back(stopline);
     std::getline(oldfile,stopline);
-
   }
   oldfile.close();
+
+  
+  lines.erase(lines.begin());  
+
+  auto newfile = std::ofstream(fname);
+  if (not newfile.is_open()) {
+    throw std::runtime_error(std::string("Cannot open file ") + fname);
+  }
+
+  for (const auto &line : lines)
+    newfile << line << std::endl;;
+  
+
+
   newfile.close();
 
   return;

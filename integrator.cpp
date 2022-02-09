@@ -6,7 +6,7 @@ using namespace std::complex_literals;
 Integrator::Integrator(MPI_Comm comm,const GridData& fourier, const int seed,
 		       const SolutionParams& solparams,const double dt)
   : ft_phi(comm,"ft_phi",fourier), ft_nonlinear(comm,"ft_nl",fourier),
-    fourier(fourier),seed(seed),
+    seed(seed),
     real_dist(-0.5,0.5),mobility(solparams.mobility),gamma(solparams.gamma),
     temp(solparams.temp),chi(solparams.chi), volFH(solparams.volFH),
     dt(dt),normalization(sqrt(1.0/(fourier.get_Nx()*fourier.get_Ny()*fourier.get_Nz())))
@@ -63,19 +63,19 @@ void Integrator::nonlinear(fftw_MPI_3Darray<double>& nonlinear,
 void Integrator::integrate(int i, int j, int k)
 {
 
-  if (i + local0start > fourier.get_Nz()/2) {
-    qz = fourier.get_dz()*(fourier.get_Nz()- i - local0start);
+  if (i + local0start > ft_phi.grid.get_Nz()/2) {
+    qz = ft_phi.grid.get_dz()*(ft_phi.grid.get_Nz()- i - local0start);
   } else {
-    qz = fourier.get_dz()*(i + local0start);
+    qz = ft_phi.grid.get_dz()*(i + local0start);
   }
 
-  if (j > fourier.get_Ny()/2) {
-    qy = fourier.get_dy()*(fourier.get_Ny()-j);
+  if (j > ft_phi.grid.get_Ny()/2) {
+    qy = ft_phi.grid.get_dy()*(ft_phi.grid.get_Ny()-j);
   } else {
-    qy = fourier.get_dy()*j;
+    qy = ft_phi.grid.get_dy()*j;
   }  
 
-  qx = fourier.get_dx()*k;
+  qx = ft_phi.grid.get_dx()*k;
   q2 = qx*qx + qy*qy + qz*qz;
   noise = complexprefactor*sqrt(q2)*sqrtdt*(real_dist(gen)+1i*real_dist(gen));
 
@@ -91,19 +91,19 @@ void Integrator::integrate(int i, int j, int k)
 void Integrator::integrate_real(int i, int j, int k)
 {
 
-  if (i + local0start > fourier.get_Nz()/2) {
-    qz = fourier.get_dz()*(fourier.get_Nz()- i - local0start);
+  if (i + local0start > ft_phi.grid.get_Nz()/2) {
+    qz = ft_phi.grid.get_dz()*(ft_phi.grid.get_Nz()- i - local0start);
   } else {
-    qz = fourier.get_dz()*(i + local0start);
+    qz = ft_phi.grid.get_dz()*(i + local0start);
   }
 
-  if (j > fourier.get_Ny()/2) {
-    qy = fourier.get_dy()*(fourier.get_Ny()-j);
+  if (j > ft_phi.grid.get_Ny()/2) {
+    qy = ft_phi.grid.get_dy()*(ft_phi.grid.get_Ny()-j);
   } else {
-    qy = fourier.get_dy()*j;
+    qy = ft_phi.grid.get_dy()*j;
   }
   
-  qx = fourier.get_dx()*k;
+  qx = ft_phi.grid.get_dx()*k;
   q2 = qx*qx + qy*qy + qz*qz;
   
   noise = realprefactor*sqrt(q2)*sqrtdt*real_dist(gen);

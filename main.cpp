@@ -1,18 +1,20 @@
 #include <iostream>
 #include <map>
 #include <complex>
+#include <chrono>
 
 
-#include "fftw_mpi_3darray.hpp"
-#include "integrator.hpp"
-#include "conjplane.hpp"
-#include "randompll.hpp"
-#include "griddata.hpp"
-#include "iovtk.hpp"
+//#include "fftw_mpi_3darray.hpp"
+//#include "integrator.hpp"
+//#include "conjplane.hpp"
+//#include "randompll.hpp"
+//#include "griddata.hpp"
+//#include "iovtk.hpp"
+#include <fftw3-mpi.h>
 #include "solutionparams.hpp"
-#include "timestep.hpp"
+//#include "timestep.hpp"
 #include "globalparams.hpp"
-
+#include "run.hpp"
 
 int main(int argc, char **argv)
 {
@@ -33,10 +35,6 @@ int main(int argc, char **argv)
   ierr = MPI_Comm_rank(comm,&id);
 
   fftw_mpi_init();
-
-
-
-
 
   std::ifstream infile;
 
@@ -110,136 +108,26 @@ int main(int argc, char **argv)
     solparams.printall();
   }
 
-  
+  std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();  
 
-  fftw_MPI_3Darray<double> phi(gp.comm,"concentration",gp.realspace);
-  fftw_MPI_3Darray<double> nonlinear(gp.comm,"chempotential",gp.realspace);
-
-
-  //  int baseseed = 129480;
-  RandomPll rpll(gp.comm,gp.id,gp.seed,gp.mpi_size);
-  
-  //  double dt = 1e-4;
-
-  /*
-  std::vector<std::string> splitvec;
-
-  splitvec.push_back("mobility");
-  splitvec.push_back("1.0");
-  splitvec.push_back("gamma");
-  splitvec.push_back("100.0");
-  splitvec.push_back("temp");
-  splitvec.push_back("1.0");
-  splitvec.push_back("chi");
-  splitvec.push_back("2.5");
-  splitvec.push_back("volFH");
-  splitvec.push_back("0.01");
-
-  SolutionParams solparams(splitvec);
-
-  if (id == 0) {
-    solparams.printall();
-  }
-  
-  */
-  
-  Integrator integrator(gp.comm,gp.fourier,rpll.get_processor_seed(),solparams,gp.dt);
-
-
-
-  //  double volfrac = 0.3;
-  //  double variance = 0.0;
-
-
-
-
-
-  fftw_plan forward_phi, backward_phi;
-  fftw_plan forward_nonlinear, backward_nonlinear;
-
-  
-  forward_phi = fftw_mpi_plan_dft_r2c_3d(gp.realspace.get_Nz(),gp.realspace.get_Ny(),
-					 gp.realspace.get_Nx(),
-					 phi.data(),
-					 reinterpret_cast<fftw_complex*>
-					 (integrator.ft_phi.data()),
-					 gp.comm, FFTW_MPI_TRANSPOSED_OUT);
-  
-  backward_phi = fftw_mpi_plan_dft_c2r_3d(gp.realspace.get_Nz(),gp.realspace.get_Ny(),
-					  gp.realspace.get_Nx(),
-					  reinterpret_cast<fftw_complex*>
-					  (integrator.ft_phi.data()),
-					  phi.data(),gp.comm,FFTW_MPI_TRANSPOSED_IN);
-
-  forward_nonlinear = fftw_mpi_plan_dft_r2c_3d(gp.realspace.get_Nz(),gp.realspace.get_Ny(),
-					       gp.realspace.get_Nx(),
-					       nonlinear.data(),
-					       reinterpret_cast<fftw_complex*>
-					       (integrator.ft_nonlinear.data()),
-					       gp.comm, FFTW_MPI_TRANSPOSED_OUT);
-  
-  backward_nonlinear = fftw_mpi_plan_dft_c2r_3d(gp.realspace.get_Nz(),gp.realspace.get_Ny(),
-						gp.realspace.get_Nx(),
-						reinterpret_cast<fftw_complex*>
-						(integrator.ft_nonlinear.data()),
-						nonlinear.data(),gp.comm,
-						FFTW_MPI_TRANSPOSED_IN);
-  
-
-  integrator.initialize(phi,gp.volFrac,gp.variance);
-
-  //  int numsteps = 20;
-  //  int startstep = 0;
-
-  double t = 0;
-
-  std::string fname = gp.dump_file + std::string("_p") + std::to_string(gp.id) ;
-  std::string fname_p = fname + std::string("_") +  std::to_string(gp.startstep) +  std::string(".vti");
-
-
-  
-  
-  if (gp.restart_flag) {
-    ioVTK::readVTKImageData({&phi},fname_p,gp.realspace);
-  } else {
-    ioVTK::writeVTKImageData(fname_p,{&phi},gp.realspace);
-    
+  if (simulation_type == "run") {
+    std::cout << "Running simulation of solution." << std::endl;
+    run(gp,solparams);
   }
 
-  TimeStep timestep(gp.comm,gp.mpi_size,gp.id,gp.fourier.get_Nz(),gp.fourier.get_Ny());
+  std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+  std::cout << "Run time = "
+	    << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()/1e6
+	    << "seconds." << std::endl;  
+
+
   
-  for (int it = 1+gp.startstep; it <= gp.steps+gp.startstep; it ++) {
-    t += integrator.get_dt();
-    std::cout << "id " << gp.id << " is on t = " << t << std::endl;
-    integrator.nonlinear(nonlinear,phi); // compute nl(t) given phi(t)
-    
-    fftw_execute(forward_phi);
-    fftw_execute(forward_nonlinear);
-
-    timestep.update(t,integrator);
-    
-
-    fftw_execute(backward_phi); // get phi(t+dt)
-
-    if (it % gp.dump_every == 0) {
-
-      fname_p = fname + std::string("_") +  std::to_string(it) +  std::string(".vti");
-      
-      ioVTK::writeVTKImageData(fname_p,{&phi},gp.realspace);
-    }
-  }
-
-  fftw_destroy_plan(forward_phi);
-  fftw_destroy_plan(backward_phi);
-  fftw_destroy_plan(forward_nonlinear);
-  fftw_destroy_plan(backward_nonlinear);
-    
   fftw_mpi_cleanup();
   ierr = MPI_Finalize();
   
   return 0;
 }
-
+/*
 void check_results(Integrator &integrator, const int id,const int divider,const int nx)
 {
   using namespace std::complex_literals;
@@ -324,3 +212,4 @@ void check_results(Integrator &integrator, const int id,const int divider,const 
   }
   return;
 }
+*/

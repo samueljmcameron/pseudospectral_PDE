@@ -96,14 +96,14 @@ void TimeStep::update(double t,Integrator &integrator)
     integrator.integrate_real(0,0,nx);
 
     integrator.ft_phi(0,0,0) = integrator.ft_phi(0,0,0)
-      /(1.0*integrator.fourier.get_Nx()*integrator.fourier.get_Ny()
-	*integrator.fourier.get_Nz());
+      /(1.0*integrator.ft_phi.grid.get_Nx()*integrator.ft_phi.grid.get_Ny()
+	*integrator.ft_phi.grid.get_Nz());
 
 
   }
-  if (local0start <= integrator.fourier.get_Nz()/2
-      && local0start + local_fftNz -1 >= integrator.fourier.get_Nz()/2) {
-    int nz = integrator.fourier.get_Nz()/2 - local0start;
+  if (local0start <= integrator.ft_phi.grid.get_Nz()/2
+      && local0start + local_fftNz -1 >= integrator.ft_phi.grid.get_Nz()/2) {
+    int nz = integrator.ft_phi.grid.get_Nz()/2 - local0start;
     int nx = local_fftNx-1;
     integrator.integrate_real(nz,0,0);
     integrator.integrate_real(nz,local_fftNy/2,0);

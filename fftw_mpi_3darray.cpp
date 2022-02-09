@@ -6,7 +6,9 @@
 template <typename T>
 fftw_MPI_3Darray<T>::fftw_MPI_3Darray(MPI_Comm comm,std::string name,
 				      const int Nz,const int Ny,
-				      const int Nx)
+				      const int Nx,const double Lz,
+				      const double Ly, const double Lx)
+  : comm(comm), grid(Nz,Ny,Nx,Lz,Ly,Lx)
 /*
   Constructor for a 3D array with axis sizes (Nz,Ny,Nx) (the x dimension
   varies the quickest). The array is not contiguous in memory for different
@@ -31,11 +33,11 @@ fftw_MPI_3Darray<T>::fftw_MPI_3Darray(MPI_Comm comm,std::string name,
 
   ptrdiff_t local_n0;
 
+
   alloc_local = fftw_mpi_local_size_3d(Nz, Ny , Nx/2 + 1, comm,
 				       &local_n0,&local_0_start);
   
   
-  _globalNz = Nz;
   _sizeax = new ptrdiff_t[3];
   _sizeax[0] = local_n0;
   _sizeax[1] = Ny;
@@ -64,6 +66,7 @@ fftw_MPI_3Darray<T>::fftw_MPI_3Darray(MPI_Comm comm,std::string name,
 template <typename T>
 fftw_MPI_3Darray<T>::fftw_MPI_3Darray(MPI_Comm comm,std::string name,
 				      const GridData& grid)
+  : comm(comm), grid(grid)
 /*
   Constructor for a 3D array with axis sizes (Nz,Ny,Nx) (the x dimension
   varies the quickest). The array is not contiguous in memory for different
@@ -92,7 +95,7 @@ fftw_MPI_3Darray<T>::fftw_MPI_3Darray(MPI_Comm comm,std::string name,
 				       &local_n0,&local_0_start);
   
   
-  _globalNz = grid.get_Nz();
+
   _sizeax = new ptrdiff_t[3];
   _sizeax[0] = local_n0;
   _sizeax[1] = grid.get_Ny();
@@ -117,6 +120,34 @@ fftw_MPI_3Darray<T>::fftw_MPI_3Darray(MPI_Comm comm,std::string name,
 
 };
 
+template <typename T>
+fftw_MPI_3Darray<T>::fftw_MPI_3Darray(const fftw_MPI_3Darray<T> & base)
+  : alloc_local(base.alloc_local),local_0_start(base.local_0_start),
+    _size(base._size),array_name(base.array_name),
+    spacer(base.spacer),comm(base.comm),grid(base.grid)
+{
+
+  _sizeax = new ptrdiff_t[3];
+  _sizeax[0] = base._sizeax[0];
+  _sizeax[1] = base._sizeax[1];
+  _sizeax[2] = base._sizeax[2];
+  
+  
+  if (typeid(T) == typeid(double)) {
+
+    arr = (T*) fftw_alloc_real(2*alloc_local);
+    
+  } else if (typeid(T) == typeid(std::complex<double>)) {
+
+
+    arr = (T*) fftw_alloc_complex(alloc_local);
+
+  } else
+    throw std::runtime_error("fftw_MPI_3Darray can only have type double, "
+			     "or std::complex<double>.");
+  
+  copy(base);
+}
 
 
 template <typename T>
@@ -148,13 +179,13 @@ T fftw_MPI_3Darray<T>::operator()(ptrdiff_t i,
 
 
 template <typename T>
-void fftw_MPI_3Darray<T>::copy(fftw_MPI_3Darray &input)
+void fftw_MPI_3Darray<T>::copy(const fftw_MPI_3Darray<T> &input) 
 /* explicitly copy elements of input to arr. */
 {
-  
+
   for (int i = 0; i < 3; i++) {
     
-    if (this->axis_size(i) != input.axis_size(i))
+    if (_sizeax[i] != input.axis_size(i))
       throw std::runtime_error("Cannot copy fftw_MPI_3Darray (wrong shape).");
   }
   for (int i = 0; i < _sizeax[0]; i++) {
@@ -188,7 +219,7 @@ std::ostream& operator<< (std::ostream& out,
 
 
 template <typename T>
-std::ostream& fftw_MPI_3Darray<T>::numpy_save(std::ostream &out)
+std::ostream& fftw_MPI_3Darray<T>::numpy_save(std::ostream &out) const
 {
   
   std::string delim = "\t";
@@ -208,9 +239,62 @@ std::ostream& fftw_MPI_3Darray<T>::numpy_save(std::ostream &out)
   
 };
 
+template <typename T>
+void fftw_MPI_3Darray<T>::abs(fftw_MPI_3Darray<double>& modulus) const
+{
+
+  for (int i = 0; i < 3; i++) {
+    
+    if (axis_size(i) != modulus.axis_size(i))
+      throw std::runtime_error("Cannot take abs of fftw_MPI_3Darray (wrong output shape).");
+  }
+
+
+  for (int i = 0; i < _sizeax[0]; i++) {
+    for (int j = 0; j < _sizeax[1]; j++) {
+      for (int k = 0; k < _sizeax[2]; k++) {
+	modulus(i,j,k) = std::abs(arr[k + (i*_sizeax[1] + j ) * spacer]);
+      }
+    }
+  }
+  return;
+
+}
+
+template <>
+void fftw_MPI_3Darray<std::complex<double>>::split(fftw_MPI_3Darray<double> &real,
+						   fftw_MPI_3Darray<double> &imag) const
+{
+  
+  for (int i = 0; i < 3; i++) {
+    
+    if (axis_size(i) != real.axis_size(i)
+	|| axis_size(i) != imag.axis_size(i))
+      throw std::runtime_error("Cannot split fftw_MPI_3Darray (wrong output shape).");
+  }
+  
+
+  for (int i = 0; i < _sizeax[0]; i++) {
+    for (int j = 0; j < _sizeax[1]; j++) {
+      for (int k = 0; k < _sizeax[2]; k++) {
+	real(i,j,k) = arr[k + (i*_sizeax[1] + j ) * spacer].real();
+	imag(i,j,k) = arr[k + (i*_sizeax[1] + j ) * spacer].imag();
+      }
+    }
+  }
+  return;
+
+}
 
 
 
+template <typename T>
+fftw_MPI_3Darray<T>& fftw_MPI_3Darray<T>::operator=(fftw_MPI_3Darray<T> other)
+{
+  swap(*this,other);
+  
+  return *this;
+}
 
 template <typename T>
 std::ostream& fftw_MPI_3Darray<T>::_write_ostream(std::ostream &out,
@@ -278,6 +362,10 @@ template std::ostream& operator<< (std::ostream& ,
 				   const fftw_MPI_3Darray<double>&);
 template std::ostream& operator<< (std::ostream& ,
 				   const fftw_MPI_3Darray<std::complex<double>>&);
+
+
+//template std::ostream& operator= (fftw_MPI_3Darray<double>);
+//template std::ostream& operator= (fftw_MPI_3Darray<std::complex<double>>);
 
 // Template below doesn't work because it forces return of double [2] array.
 //template class fftw_MPI_3Darray<fftw_complex>; 

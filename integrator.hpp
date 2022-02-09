@@ -38,8 +38,6 @@ private:
   
 public:
 
-  const GridData fourier;
-
   void ode(std::complex<double> &, std::complex<double>,
 	   std::complex<double>, double);
   Integrator(MPI_Comm,const GridData&,const int,

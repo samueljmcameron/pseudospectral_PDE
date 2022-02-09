@@ -1,0 +1,16 @@
+# set global parameters
+
+boxgrid      64 64 64
+boxdims      100.0 100.0 100.0
+steps        500000
+dt	     1e-4
+dump_every   1000
+volFrac	     0.3 0.0
+seed         ${seed}
+dump_file    homogeneous/homo
+
+
+
+# set polymer parameters
+
+build_solution mobility 1.0 volFH 0.01 gamma 100.0 chi 2.37 temp 1.0
