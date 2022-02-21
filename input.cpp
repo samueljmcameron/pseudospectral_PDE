@@ -87,11 +87,11 @@ namespace input {
 	    throw std::runtime_error("No content ('${}') in input file.");
 	  bool found_key = false;
 	  
-	  for (const auto &[key,value]: varMap) {
-	    if (key == tmp) {
+	  for (const auto &xm: varMap) {
+	    if (xm.first == tmp) {
 	      found_key = true;
 	      raw.erase(vstart,vend - vstart+1);
-	      raw.insert(vstart,value);
+	      raw.insert(vstart,xm.second);
 	    }
 	  }
 	  if (!found_key) {

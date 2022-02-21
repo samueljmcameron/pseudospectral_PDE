@@ -1,5 +1,5 @@
 #include <complex>
-
+#include <typeinfo>
 #include "fftw_mpi_3darray.hpp"
 
 
@@ -156,6 +156,19 @@ fftw_MPI_3Darray<T>::~fftw_MPI_3Darray() {
   fftw_free(arr);
 };
 
+template <typename T>
+fftw_MPI_3Darray<T>& fftw_MPI_3Darray<T>::operator/=(T rhs)
+{
+  for (int i = 0; i < _sizeax[0]; i++) {
+    for (int j = 0; j < _sizeax[1]; j++) {
+      for (int k = 0; k < _sizeax[2]; k++) {
+	arr[k + (i*_sizeax[1] + j ) * spacer] /= rhs;
+      }
+    }
+  }
+  return *this;
+};
+
 
 template <typename T>
 T& fftw_MPI_3Darray<T>::operator()(ptrdiff_t i,
@@ -260,6 +273,57 @@ void fftw_MPI_3Darray<T>::abs(fftw_MPI_3Darray<double>& modulus) const
   return;
 
 }
+
+template <typename T>
+void fftw_MPI_3Darray<T>::mod(fftw_MPI_3Darray<double>& modulus) const
+{
+
+  for (int i = 0; i < 3; i++) {
+    
+    if (axis_size(i) != modulus.axis_size(i))
+      throw std::runtime_error("Cannot take abs of fftw_MPI_3Darray (wrong output shape).");
+  }
+
+
+  for (int i = 0; i < _sizeax[0]; i++) {
+    for (int j = 0; j < _sizeax[1]; j++) {
+      for (int k = 0; k < _sizeax[2]; k++) {
+	modulus(i,j,k) = std::abs(arr[k + (i*_sizeax[1] + j ) * spacer])
+	  *std::abs(arr[k + (i*_sizeax[1] + j ) * spacer]);
+      }
+    }
+  }
+  return;
+
+}
+
+
+template <typename T>
+void fftw_MPI_3Darray<T>::running_mod(fftw_MPI_3Darray<double>& modulus) const
+{
+
+  for (int i = 0; i < 3; i++) {
+    
+    if (axis_size(i) != modulus.axis_size(i))
+      throw std::runtime_error("Cannot take abs of fftw_MPI_3Darray (wrong output shape).");
+  }
+
+
+  for (int i = 0; i < _sizeax[0]; i++) {
+    for (int j = 0; j < _sizeax[1]; j++) {
+      for (int k = 0; k < _sizeax[2]; k++) {
+	modulus(i,j,k) += std::abs(arr[k + (i*_sizeax[1] + j ) * spacer])
+	  *std::abs(arr[k + (i*_sizeax[1] + j ) * spacer]);
+      }
+    }
+  }
+  return;
+
+}
+
+
+
+
 
 template <>
 void fftw_MPI_3Darray<std::complex<double>>::split(fftw_MPI_3Darray<double> &real,

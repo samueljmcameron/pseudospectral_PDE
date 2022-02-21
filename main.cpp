@@ -2,6 +2,7 @@
 #include <map>
 #include <complex>
 #include <chrono>
+#include <cstring>
 
 
 //#include "fftw_mpi_3darray.hpp"

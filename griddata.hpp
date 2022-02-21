@@ -8,12 +8,6 @@ class GridData {
   double Oz,Oy,Ox;
   double dz,dy,dx;
   
-  void update_origins();
-  
-  void update_spacings();
-  
-  void update_all();
-  
 public:
   
   
@@ -21,20 +15,15 @@ public:
   
   GridData(const int , const int , const int ,
 	   const double , const double , const double );
-  
-  GridData(const int , const double );
-  
-  GridData(const GridData& );
+
+  GridData(const int , const int , const int ,
+	   const double , const double , const double,
+	   const double, const double, const double);
 
 
-  GridData fft_grid();
+  GridData fft_grid() const;
 
   void transpose_yz();
-
-  
-  
-  void reset(const int , const int , const int ,
-	     const double, const double, const double );
 
 
   int get_Nx() const
@@ -93,6 +82,10 @@ public:
     return Lz;
   };
 
+  GridData get_positiveNx_grid() const
+  {
+    return GridData(Nz,Ny,Nx/2+1,Lz,Ly,Lx/2+dx,Oz,Oy,0);
+  };
   
 
   

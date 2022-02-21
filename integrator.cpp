@@ -1,7 +1,7 @@
 #include "integrator.hpp"
 
 
-using namespace std::complex_literals;
+
 
 Integrator::Integrator(MPI_Comm comm,const GridData& fourier, const int seed,
 		       const SolutionParams& solparams,const double dt)
@@ -51,8 +51,8 @@ void Integrator::nonlinear(fftw_MPI_3Darray<double>& nonlinear,
       for (int k = 0; k < nonlinear.axis_size(2); k++) {
 	nonlinear(i,j,k)
 	  = temp/volFH*(log(phi(i,j,k)/(1-phi(i,j,k)))+chi*(1-2*phi(i,j,k)));
-
-	  //-quad*phi(i,j,k)+quartic*phi(i,j,k)*phi(i,j,k)*phi(i,j,k);
+	  //	  = 2*temp/volFH*phi(i,j,k);
+	  //= -quad*phi(i,j,k)+quartic*phi(i,j,k)*phi(i,j,k)*phi(i,j,k);
       }
     }
   }
@@ -77,8 +77,8 @@ void Integrator::integrate(int i, int j, int k)
 
   qx = ft_phi.grid.get_dx()*k;
   q2 = qx*qx + qy*qy + qz*qz;
-  noise = complexprefactor*sqrt(q2)*sqrtdt*(real_dist(gen)+1i*real_dist(gen));
-
+  noise.real(complexprefactor*sqrt(q2)*sqrtdt*real_dist(gen));
+  noise.imag(complexprefactor*sqrt(q2)*sqrtdt*real_dist(gen));
   
   ode(ft_phi(i,j,k),ft_nonlinear(i,j,k),noise,q2);
   
@@ -119,7 +119,6 @@ void Integrator::ode(std::complex<double> & y, std::complex<double> ynl,
 		   std::complex<double> rnd, double q2)
 {
   y = (y-mobility*q2*dt*(ynl+gamma*q2*y))*normalization*normalization +  rnd;
-  //  y = y*(1-mobility*q2*dt)*normalization*normalization + rnd;
   return;
 }
 

@@ -11,8 +11,9 @@ GlobalParams::GlobalParams(const MPI_Comm comm, const int id, const int mpi_size
   dump_every(default_dump_every), dump_file(default_dump_file),
   id(id),comm(comm),mpi_size(mpi_size),variance(default_variance),
   restart_flag(false),starttime(0.0),startstep(0),seed(default_seed),
-  realspace(default_grid,default_length),
-  fourier(GridData(default_grid,default_length).fft_grid())
+  realspace(default_grid,default_grid,default_grid,
+	    default_length,default_length,default_length),
+  fourier(realspace)
 {
 
 
@@ -103,7 +104,7 @@ GlobalParams::GlobalParams(const MPI_Comm comm, const int id, const int mpi_size
     
   }
   
-  realspace.reset(Nz,Ny,Nx,Lz,Ly,Lx);
+  realspace = GridData(Nz,Ny,Nx,Lz,Ly,Lx);
   fourier = realspace.fft_grid();
 
 
@@ -146,17 +147,25 @@ void GlobalParams::printall()
 	    << realspace.get_Nz() << "). (Default is " << default_grid << ".)"
 	    << std::endl;
   std::cout << "boxdims: (" << realspace.get_Lx() << ","
-	    << realspace.get_Ny() << ","  << realspace.get_Nz()
+	    << realspace.get_Ly() << ","  << realspace.get_Lz()
 	    << "). (Default is " << default_length << ".)"
 	    << std::endl;
+
+  std::cout << "boxorigin: (" << realspace.get_Ox() << ","
+	    << realspace.get_Oy() << ","  << realspace.get_Oz()
+	    << "). "  << std::endl;
 
   std::cout << "fouriergrid (just to confirm): (" << fourier.get_Nx() << "," << fourier.get_Ny()
 	    << "," << fourier.get_Nz() << "). (Default is " << default_grid << ".)"
 	    << std::endl;
   std::cout << "fourierdims (just to confirm): (" << fourier.get_Lx() << ","
-	    << fourier.get_Ny() << ","  << fourier.get_Nz()
+	    << fourier.get_Ly() << ","  << fourier.get_Lz()
 	    << "). (Default is " << default_length << ".)"
 	    << std::endl;
+
+  std::cout << "fourierorigin: (" << fourier.get_Ox() << ","
+	    << fourier.get_Oy() << ","  << fourier.get_Oz()
+	    << "). "  << std::endl;
 
   
   std::cout << "Restart: " << restart_flag << std::endl;

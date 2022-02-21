@@ -15,7 +15,7 @@ void run(GlobalParams gp, SolutionParams solparams) {
   fftw_MPI_3Darray<double> phi(gp.comm,"concentration",gp.realspace);
   fftw_MPI_3Darray<double> nonlinear(gp.comm,"chempotential",gp.realspace);
 
-  std::cout << gp.id << "," << phi.axis_size(0) << std::endl;
+
   RandomPll rpll(gp.comm,gp.id,gp.seed,gp.mpi_size);
   
   Integrator integrator(gp.comm,gp.fourier,rpll.get_processor_seed(),solparams,gp.dt);
@@ -69,17 +69,24 @@ void run(GlobalParams gp, SolutionParams solparams) {
 
   std::string complexcollection_name = complexprefix + std::string(".pvd");
   
-  fftw_MPI_3Darray<double> modulus(gp.comm,integrator.ft_phi.get_name()+std::string("_abs"),
-				   gp.fourier.get_Nz(),gp.fourier.get_Ny(),
-				   gp.fourier.get_Nx()/2+1,gp.fourier.get_Lz(),
-				   gp.fourier.get_Ly(),gp.fourier.get_Lx()/2);
+  fftw_MPI_3Darray<double> modulus(gp.comm,integrator.ft_phi.get_name()+std::string("_mod"),
+				   gp.fourier.get_positiveNx_grid());
 
+  int running_average_count = 0;
   if (gp.restart_flag) {
     
     ioVTK::restartVTKcollection(collection_name);
     ioVTK::restartVTKcollection(complexcollection_name);
     
     ioVTK::readVTKImageData({&phi},fname_p,gp.realspace);
+    
+    for (int i = 0; i < integrator.ft_phi.axis_size(0); i++) {
+      for (int j = 0; j < integrator.ft_phi.axis_size(1); j++) {
+	for (int k = 0; k < integrator.ft_phi.axis_size(2); k++) {
+	  modulus(i,j,k) = 0.0;
+	}
+      }
+    }
 
     std::cout << "restarting!" << std::endl;
 
@@ -89,7 +96,7 @@ void run(GlobalParams gp, SolutionParams solparams) {
     ioVTK::writeVTKcollectionHeader(complexcollection_name);
 
     fftw_execute(forward_phi);
-    integrator.ft_phi.abs(modulus);
+    integrator.ft_phi.mod(modulus);
 
     double norm = 1.0/(integrator.ft_phi.grid.get_Nx()*integrator.ft_phi.grid.get_Ny()
 		       *integrator.ft_phi.grid.get_Nz());
@@ -120,7 +127,7 @@ void run(GlobalParams gp, SolutionParams solparams) {
   
   for (int it = 1+gp.startstep; it <= gp.steps+gp.startstep; it ++) {
     t += integrator.get_dt();
-    std::cout << "id " << gp.id << " is on t = " << t << std::endl;
+
     integrator.nonlinear(nonlinear,phi); // compute nl(t) given phi(t)
     
     fftw_execute(forward_phi);
@@ -128,13 +135,22 @@ void run(GlobalParams gp, SolutionParams solparams) {
 
     
     timestep.update(t,integrator);
+
+    integrator.ft_phi.running_mod(modulus);
+    running_average_count += 1;
+
     if (it % gp.dump_every == 0) {
+      std::cout << "id " << gp.id << " saving at t = " << t << std::endl;
       fname_p = prefix + std::string("_") +  std::to_string(it) +  std::string(".vti");
       complexfname_p = complexprefix + std::string("_") +  std::to_string(it) +  std::string(".vti");
-      integrator.ft_phi.abs(modulus);
+      modulus /= running_average_count;
+      running_average_count = 0;
+
       ioVTK::writeVTKImageData(complexfname_p,{&modulus},modulus.grid);
       ioVTK::writeVTKcollectionMiddle(complexcollection_name,complexfname_p,t);
       fftw_execute(backward_phi); // get phi(t+dt)
+
+      integrator.initialize(modulus,0,0);
 
       ioVTK::writeVTKImageData(fname_p,{&phi},phi.grid);
       ioVTK::writeVTKcollectionMiddle(collection_name,fname_p,t);

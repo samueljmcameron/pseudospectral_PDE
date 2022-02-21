@@ -71,7 +71,11 @@ public:
   //  template <typename T0>
   fftw_MPI_3Darray<T>& operator=(fftw_MPI_3Darray<T> other);
 
+  fftw_MPI_3Darray<T>& operator/=(T rhs);
   void abs(fftw_MPI_3Darray<double>&) const;
+  void mod(fftw_MPI_3Darray<double>&) const;
+
+  void running_mod(fftw_MPI_3Darray<double>&) const;
   void split(fftw_MPI_3Darray<double> &,
 	     fftw_MPI_3Darray<double> &) const;
 
