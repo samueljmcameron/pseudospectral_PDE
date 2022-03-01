@@ -109,6 +109,10 @@ void run(GlobalParams gp, SolutionParams solparams) {
 	}
       }
     }
+    if (gp.id == 0) {
+      modulus(0,0,0) = 0.0;
+      std::cout << "modulus at zero is = " << modulus(0,0,0) << std::endl;
+    }
 
     fftw_execute(backward_phi);
     
@@ -144,6 +148,11 @@ void run(GlobalParams gp, SolutionParams solparams) {
       fname_p = prefix + std::string("_") +  std::to_string(it) +  std::string(".vti");
       complexfname_p = complexprefix + std::string("_") +  std::to_string(it) +  std::string(".vti");
       modulus /= running_average_count;
+      if (gp.id == 0) {
+	modulus(0,0,0) = 0.0;
+	std::cout << "modulus at zero is = " << modulus(0,0,0) << std::endl;
+      }
+      
       running_average_count = 0;
 
       ioVTK::writeVTKImageData(complexfname_p,{&modulus},modulus.grid);
