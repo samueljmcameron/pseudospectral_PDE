@@ -9,6 +9,7 @@ Integrator::Integrator(MPI_Comm comm,const GridData& fourier, const int seed,
     seed(seed),
     real_dist(-0.5,0.5),mobility(solparams.mobility),gamma(solparams.gamma),
     temp(solparams.temp),chi(solparams.chi), volFH(solparams.volFH),
+    chi_LP(solparams.chi_LP),nucmax(solparams.nucmax),nucwidth(solparams.nucwidth),
     dt(dt),normalization(sqrt(1.0/(fourier.get_Nx()*fourier.get_Ny()*fourier.get_Nz())))
 {
 
@@ -44,13 +45,30 @@ void Integrator::initialize(fftw_MPI_3Darray<double> & phi,
 
 
 void Integrator::nonlinear(fftw_MPI_3Darray<double>& nonlinear,
-			 const fftw_MPI_3Darray<double>& phi)
+			   const fftw_MPI_3Darray<double>& phi,
+			   const std::vector<double> & telomerepos)
 {
+
+  int real0start = phi.get_local0start();
+  double dx = phi.grid.get_dx();
+  double dy = phi.grid.get_dy();
+  double dz = phi.grid.get_dz();
+  double Ox = phi.grid.get_Ox();
+  double Oy = phi.grid.get_Oy();
+  double Oz = phi.grid.get_Oz();
+
+  double x,y,z;
+  double philink;
   for (int i = 0; i < nonlinear.axis_size(0); i++) {
+    z = dz*(i+  local0start) + Oz;
     for (int j = 0; j < nonlinear.axis_size(1); j++) {
+      y = dy*j + Oy;
       for (int k = 0; k < nonlinear.axis_size(2); k++) {
+	x = dx*k + Ox;
+	philink = linker_phi(x,y,z,telomerepos);
 	nonlinear(i,j,k)
-	  = temp/volFH*(log(phi(i,j,k)/(1-phi(i,j,k)))+chi*(1-2*phi(i,j,k)));
+	  = temp/volFH*(log(phi(i,j,k)/(1-phi(i,j,k)-philink))+chi*(1-2*phi(i,j,k))
+			-2*chi_LP*philink);
 	  //	  = 2*temp/volFH*phi(i,j,k);
 	  //= -quad*phi(i,j,k)+quartic*phi(i,j,k)*phi(i,j,k)*phi(i,j,k);
       }
@@ -120,6 +138,16 @@ void Integrator::ode(std::complex<double> & y, std::complex<double> ynl,
 {
   y = (y-mobility*q2*dt*(ynl+gamma*q2*y))*normalization*normalization +  rnd;
   return;
+}
+
+
+
+
+double Integrator::linker_phi(double x, double y, double z,
+			    const std::vector<double> & tpos)
+{
+  return nucmax*exp(-(x-tpos[0])*(x-tpos[0])-(y-tpos[1])*(y-tpos[1])
+		    -(z-tpos[2])*(z-tpos[2])/(2*nucwidth*nucwidth));
 }
 
 

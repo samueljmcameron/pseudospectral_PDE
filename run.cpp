@@ -54,7 +54,7 @@ void run(GlobalParams gp, SolutionParams solparams) {
 
   integrator.initialize(phi,gp.volFrac,gp.variance);
 
-  
+  std::vector<double> telomerepos = {0.0,0.0,0.0};
   double t = gp.starttime;
 
   std::string prefix = gp.dump_file + std::string("_p") + std::to_string(gp.id) ;
@@ -132,7 +132,7 @@ void run(GlobalParams gp, SolutionParams solparams) {
   for (int it = 1+gp.startstep; it <= gp.steps+gp.startstep; it ++) {
     t += integrator.get_dt();
 
-    integrator.nonlinear(nonlinear,phi); // compute nl(t) given phi(t)
+    integrator.nonlinear(nonlinear,phi,telomerepos); // compute nl(t) given phi(t)
     
     fftw_execute(forward_phi);
     fftw_execute(forward_nonlinear);

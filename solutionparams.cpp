@@ -5,7 +5,7 @@
 
 SolutionParams::SolutionParams(std::vector<std::string> splitvec)
   : mobility(default_mobility),volFH(default_volFH),gamma(default_gamma),
-    chi(default_chi),temp(default_temp)
+    chi(default_chi),temp(default_temp),chi_LP(default_chi_LP),nucmax(default_nucmax),nucwidth(default_nucwidth)
 {
   int nargs = splitvec.size();
   int iarg = 0;
@@ -26,6 +26,15 @@ SolutionParams::SolutionParams(std::vector<std::string> splitvec)
       iarg += 2;
     } else if (splitvec[iarg] == "chi") {
       input::isDouble(splitvec[iarg+1],chi,splitvec[iarg]);
+      iarg += 2;
+    } else if (splitvec[iarg] == "chi_LP") {
+      input::isDouble(splitvec[iarg+1],chi_LP,splitvec[iarg]);
+      iarg += 2;
+    } else if (splitvec[iarg] == "nucmax") {
+      input::isDouble(splitvec[iarg+1],nucmax,splitvec[iarg]);
+      iarg += 2;
+    } else if (splitvec[iarg] == "nucwidth") {
+      input::isDouble(splitvec[iarg+1],nucwidth,splitvec[iarg]);
       iarg += 2;
     } else {
       throw std::runtime_error("Error: invalid argument for build_solution.");
@@ -49,6 +58,12 @@ void SolutionParams::printall()
   std::cout << "temp: " << temp << ". (Default is " << default_temp << ".)"
 	    << std::endl;
   std::cout << "chi: " << chi << ". (Default is " << default_chi
+	    << ".)"   << std::endl << std::endl;
+  std::cout << "chi_LP: " << chi_LP << ". (Default is " << default_chi_LP
+	    << ".)"   << std::endl << std::endl;
+  std::cout << "nucmax: " << nucmax << ". (Default is " << default_nucmax
+	    << ".)"   << std::endl << std::endl;
+  std::cout << "nucwidth: " << nucwidth << ". (Default is " << default_nucwidth
 	    << ".)"   << std::endl << std::endl;
 
 

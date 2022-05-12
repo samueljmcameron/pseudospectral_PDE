@@ -24,6 +24,9 @@ private:
   const double temp;
   const double chi;
   const double volFH;
+  const double chi_LP;
+  const double nucmax;
+  const double nucwidth;
   
   const double normalization;
   double dt,sqrtdt;
@@ -34,12 +37,12 @@ private:
   std::mt19937 gen;
 
   std::uniform_real_distribution<double> real_dist;
-
+  double linker_phi(double , double , double ,const std::vector<double> & );
+  void ode(std::complex<double> &, std::complex<double>,
+	   std::complex<double>, double);
   
 public:
 
-  void ode(std::complex<double> &, std::complex<double>,
-	   std::complex<double>, double);
   Integrator(MPI_Comm,const GridData&,const int,
 	     const SolutionParams&,const double);
   ~Integrator();
@@ -51,13 +54,16 @@ public:
 		  const double , const double );
   
   void nonlinear(fftw_MPI_3Darray<double>&,
-		 const fftw_MPI_3Darray<double>&);
+		 const fftw_MPI_3Darray<double>&,
+		 const std::vector<double>&);
     
 
   double get_dt() { return dt; };
   
   void integrate(int , int , int);
   void integrate_real(int , int , int);
+
+
 };
 
 #endif
