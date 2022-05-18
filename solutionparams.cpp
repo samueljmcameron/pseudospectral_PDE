@@ -30,6 +30,9 @@ SolutionParams::SolutionParams(std::vector<std::string> splitvec)
     } else if (splitvec[iarg] == "chi_LP") {
       input::isDouble(splitvec[iarg+1],chi_LP,splitvec[iarg]);
       iarg += 2;
+    } else if (splitvec[iarg] == "chi_LL") {
+      input::isDouble(splitvec[iarg+1],chi_LL,splitvec[iarg]);
+      iarg += 2;
     } else if (splitvec[iarg] == "nucmax") {
       input::isDouble(splitvec[iarg+1],nucmax,splitvec[iarg]);
       iarg += 2;
@@ -60,6 +63,8 @@ void SolutionParams::printall()
   std::cout << "chi: " << chi << ". (Default is " << default_chi
 	    << ".)"   << std::endl << std::endl;
   std::cout << "chi_LP: " << chi_LP << ". (Default is " << default_chi_LP
+	    << ".)"   << std::endl << std::endl;
+  std::cout << "chi_LL: " << chi_LL << ". (Default is " << default_chi_LL
 	    << ".)"   << std::endl << std::endl;
   std::cout << "nucmax: " << nucmax << ". (Default is " << default_nucmax
 	    << ".)"   << std::endl << std::endl;

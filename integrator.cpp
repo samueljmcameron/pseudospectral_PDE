@@ -46,7 +46,7 @@ void Integrator::initialize(fftw_MPI_3Darray<double> & phi,
 
 void Integrator::nonlinear(fftw_MPI_3Darray<double>& nonlinear,
 			   const fftw_MPI_3Darray<double>& phi,
-			   const std::vector<double> & telomerepos)
+			   const std::vector<double> & X_i)
 {
 
   int real0start = phi.get_local0start();
@@ -57,18 +57,43 @@ void Integrator::nonlinear(fftw_MPI_3Darray<double>& nonlinear,
   double Oy = phi.grid.get_Oy();
   double Oz = phi.grid.get_Oz();
 
+  double Lx = phi.grid.get_Lx();
+  double Ly = phi.grid.get_Ly();
+  double Lz = phi.grid.get_Lz();
+
   double x,y,z;
   double philink;
+
+
   for (int i = 0; i < nonlinear.axis_size(0); i++) {
     z = dz*(i+  local0start) + Oz;
+
+    while (z-X_i[2] > Lz/2)
+      z -= Lz;
+    while (z-X_i[2] < -Lz/2)
+      z += Lz;
+    
     for (int j = 0; j < nonlinear.axis_size(1); j++) {
+      
       y = dy*j + Oy;
+
+      while (y-X_i[1] > Ly/2)
+	y -= Ly;
+      while (y-X_i[1] < -Ly/2)
+	y += Ly;
+      
       for (int k = 0; k < nonlinear.axis_size(2); k++) {
 	x = dx*k + Ox;
-	philink = linker_phi(x,y,z,telomerepos);
+
+	while (x-X_i[0] > Lx/2)
+	  x -= Lx;
+	while (x-X_i[0] < -Lx/2)
+	  x += Lx;
+
+	philink = linker_phi(x,y,z,X_i);
 	nonlinear(i,j,k)
-	  = temp/volFH*(log(phi(i,j,k)/(1-phi(i,j,k)-philink))+chi*(1-2*phi(i,j,k))
-			-2*chi_LP*philink);
+	  = temp/volFH*(log(phi(i,j,k)/(1-phi(i,j,k)))+chi*(1-2*phi(i,j,k))
+			+philink*(phi(i,j,k)-nucmax));
 	  //	  = 2*temp/volFH*phi(i,j,k);
 	  //= -quad*phi(i,j,k)+quartic*phi(i,j,k)*phi(i,j,k)*phi(i,j,k);
       }
@@ -143,12 +168,29 @@ void Integrator::ode(std::complex<double> & y, std::complex<double> ynl,
 
 
 
+
+/* function expects that x-X_i etc are appropriately wrapped. */
 double Integrator::linker_phi(double x, double y, double z,
-			    const std::vector<double> & tpos)
+			      const std::vector<double> & X_i)
 {
-  return nucmax*exp(-(x-tpos[0])*(x-tpos[0])-(y-tpos[1])*(y-tpos[1])
-		    -(z-tpos[2])*(z-tpos[2])/(2*nucwidth*nucwidth));
+  return chi_LP*exp(-((x-X_i[0])*(x-X_i[0])+(y-X_i[1])*(y-X_i[1])
+		      +(z-X_i[2])*(z-X_i[2]))/(2*nucwidth*nucwidth));
 }
+
+/* function expects that x-X_i etc are appropriately wrapped. */
+void Integrator::linker_derivative(std::vector<double> & out,
+				   double x, double y, double z,
+				   const std::vector<double> & X_i)
+{
+
+  double tmp = linker_phi(x,y,z,X_i);
+  out[0] = tmp*(x-X_i[0])/(nucwidth*nucwidth);
+  out[1] = tmp*(y-X_i[1])/(nucwidth*nucwidth);
+  out[2] = tmp*(z-X_i[2])/(nucwidth*nucwidth);
+  return;
+  
+}
+
 
 
 /*

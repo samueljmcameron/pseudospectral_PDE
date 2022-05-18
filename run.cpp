@@ -1,6 +1,7 @@
 
 #include "fftw_mpi_3darray.hpp"
 #include "integrator.hpp"
+//#include "linker.hpp"
 #include "conjplane.hpp"
 #include "randompll.hpp"
 #include "griddata.hpp"
@@ -54,7 +55,7 @@ void run(GlobalParams gp, SolutionParams solparams) {
 
   integrator.initialize(phi,gp.volFrac,gp.variance);
 
-  std::vector<double> telomerepos = {0.0,0.0,0.0};
+  std::vector<double> X_i = {0.0,0.0,5.0};
   double t = gp.starttime;
 
   std::string prefix = gp.dump_file + std::string("_p") + std::to_string(gp.id) ;
@@ -124,7 +125,7 @@ void run(GlobalParams gp, SolutionParams solparams) {
   }
 
 
-
+  std::vector<double> free_energy_derivative;
   
   TimeStep timestep(gp.comm,gp.mpi_size,gp.id,integrator.ft_phi.axis_size(0),
 		    integrator.ft_phi.axis_size(1));
@@ -132,7 +133,7 @@ void run(GlobalParams gp, SolutionParams solparams) {
   for (int it = 1+gp.startstep; it <= gp.steps+gp.startstep; it ++) {
     t += integrator.get_dt();
 
-    integrator.nonlinear(nonlinear,phi,telomerepos); // compute nl(t) given phi(t)
+    integrator.nonlinear(nonlinear,phi,X_i); // compute nl(t) given phi(t)
     
     fftw_execute(forward_phi);
     fftw_execute(forward_nonlinear);
@@ -166,6 +167,13 @@ void run(GlobalParams gp, SolutionParams solparams) {
     } else {
       fftw_execute(backward_phi); // get phi(t+dt)
     }
+
+    //    link.wrap_X_i(X_i,phi.grid.get_Lx(),phi.grid.get_Ly(),phi.grid.get_Lz());
+    //    free_energy_derivative
+    //      = link.free_energy_derivative(X_i,integrator.linker_phi,
+    //				    integrator.linker_derivative,phi);
+
+    
   }
 
   ioVTK::writeVTKcollectionFooter(collection_name);

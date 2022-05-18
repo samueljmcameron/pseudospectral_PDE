@@ -12,6 +12,7 @@ class SolutionParams {
   const double default_chi = 2.5;
   const double default_temp = 1.0;
   const double default_chi_LP = 2.5;
+  const double default_chi_LL = 2.5;
   const double default_nucmax = 0.1;
   const double default_nucwidth = 0.1;
   
@@ -20,7 +21,7 @@ public:
 
 
   double mobility, volFH, gamma,temp, chi;
-  double chi_LP, nucmax, nucwidth;
+  double chi_LP,chi_LL, nucmax, nucwidth;
   
   void printall();  
 };

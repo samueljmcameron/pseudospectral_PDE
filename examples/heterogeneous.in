@@ -13,4 +13,4 @@ dump_file    heterogeneous/hetero
 
 # set polymer parameters
 
-build_solution mobility 1.0 volFH 0.01 gamma 100.0 chi 2.1 temp 1.0 chi_LP 4.0 nucmax 0.5 nucwidth 1.0
+build_solution mobility 1.0 volFH 0.01 gamma 100.0 chi 2.1 temp 1.0 chi_LP 4.0 chi_LL 1.0 nucmax 0.5 nucwidth 1.0

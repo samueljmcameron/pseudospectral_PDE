@@ -37,7 +37,8 @@ private:
   std::mt19937 gen;
 
   std::uniform_real_distribution<double> real_dist;
-  double linker_phi(double , double , double ,const std::vector<double> & );
+
+  
   void ode(std::complex<double> &, std::complex<double>,
 	   std::complex<double>, double);
   
@@ -63,6 +64,14 @@ public:
   void integrate(int , int , int);
   void integrate_real(int , int , int);
 
+
+  double linker_phi(double , double , double ,const std::vector<double> & );
+
+  void linker_derivative(std::vector<double> &,
+			 double, double , double ,
+			 const std::vector<double> &);
+
+  
 
 };
 
