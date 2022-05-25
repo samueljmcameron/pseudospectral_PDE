@@ -9,6 +9,7 @@ GlobalParams::GlobalParams(const MPI_Comm comm, const int id, const int mpi_size
 			   std::string& lastline) :
   steps(default_steps),dt(default_dt),volFrac(default_volFrac),
   dump_every(default_dump_every), dump_file(default_dump_file),
+  thermo_every(default_thermo_every), thermo_file(default_thermo_file),
   id(id),comm(comm),mpi_size(mpi_size),variance(default_variance),
   restart_flag(false),starttime(0.0),startstep(0),seed(default_seed),
   realspace(default_grid,default_grid,default_grid,
@@ -58,8 +59,12 @@ GlobalParams::GlobalParams(const MPI_Comm comm, const int id, const int mpi_size
 	  input::isDouble(splitvec[1],dt,splitvec[0]);
 	} else if (splitvec[0] == "dump_every") {
 	  input::isInt(splitvec[1],dump_every,splitvec[0]);
+	} else if (splitvec[0] == "thermo_every") {
+	  input::isInt(splitvec[1],thermo_every,splitvec[0]);	  
 	} else if (splitvec[0] == "dump_file") {
 	  dump_file = splitvec[1];
+	} else if (splitvec[0] == "thermo_file") {
+	  thermo_file = splitvec[1];
 	} else if (splitvec[0] == "seed") {
 	  input::isInt(splitvec[1],seed,splitvec[0]);
 	}
@@ -139,6 +144,12 @@ void GlobalParams::printall()
 	    << ".)"   << std::endl;
   std::cout << "dump_file: " << dump_file << ". (Default is " << default_dump_file << ".)"
 	    << std::endl;
+
+  std::cout << "thermo_every: " << thermo_every << ". (Default is " << default_thermo_every
+	    << ".)"   << std::endl;
+  std::cout << "thermo_file: " << thermo_file << ". (Default is " << default_thermo_file << ".)"
+	    << std::endl;
+
   std::cout << "seed: " << seed << ". (Default is " << default_seed << ".)"
 	    << std::endl;
   

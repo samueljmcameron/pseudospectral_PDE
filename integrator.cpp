@@ -44,9 +44,10 @@ void Integrator::initialize(fftw_MPI_3Darray<double> & phi,
 }
 
 
-void Integrator::nonlinear(fftw_MPI_3Darray<double>& nonlinear,
-			   const fftw_MPI_3Darray<double>& phi,
-			   const std::vector<double> & X_i)
+std::vector<std::vector<double>> Integrator::nonlinear(fftw_MPI_3Darray<double>& nonlinear,
+						       const fftw_MPI_3Darray<double>& phi,
+						       const std::vector<std::vector<double>> & X_is,
+						       double & free_energy)
 {
 
   int real0start = phi.get_local0start();
@@ -64,42 +65,68 @@ void Integrator::nonlinear(fftw_MPI_3Darray<double>& nonlinear,
   double x,y,z;
   double philink;
 
+  free_energy = 0;
+  double allfree_energy;
 
+  // sum will store the free energy derivative integral
+  std::vector<std::vector<double>> sum ;
+  // allsum is sum after MPI_Allreduce
+  std::vector<std::vector<double>> allsum ;
+
+  for (unsigned i = 0; i < X_is.size(); i++) {
+    sum.push_back({0,0,0});
+    allsum.push_back({0,0,0});
+  }
+
+
+  std::vector<double> dlink(3);
+  
   for (int i = 0; i < nonlinear.axis_size(0); i++) {
     z = dz*(i+  local0start) + Oz;
 
-    while (z-X_i[2] > Lz/2)
-      z -= Lz;
-    while (z-X_i[2] < -Lz/2)
-      z += Lz;
     
     for (int j = 0; j < nonlinear.axis_size(1); j++) {
       
       y = dy*j + Oy;
 
-      while (y-X_i[1] > Ly/2)
-	y -= Ly;
-      while (y-X_i[1] < -Ly/2)
-	y += Ly;
       
       for (int k = 0; k < nonlinear.axis_size(2); k++) {
 	x = dx*k + Ox;
 
-	while (x-X_i[0] > Lx/2)
-	  x -= Lx;
-	while (x-X_i[0] < -Lx/2)
-	  x += Lx;
 
-	philink = linker_phi(x,y,z,X_i);
+	philink = linker_phi(x,y,z,Lx,Ly,Lz,X_is);
 	nonlinear(i,j,k)
 	  = temp/volFH*(log(phi(i,j,k)/(1-phi(i,j,k)))+chi*(1-2*phi(i,j,k))
 			+philink*(phi(i,j,k)-nucmax));
-	  //	  = 2*temp/volFH*phi(i,j,k);
-	  //= -quad*phi(i,j,k)+quartic*phi(i,j,k)*phi(i,j,k)*phi(i,j,k);
+	//	  = 2*temp/volFH*phi(i,j,k);
+	//= -quad*phi(i,j,k)+quartic*phi(i,j,k)*phi(i,j,k)*phi(i,j,k);
+
+
+	for (unsigned index = 0; index < sum.size() ; index ++) {
+	  linker_derivative(dlink,x,y,z,Lx,Ly,Lz,X_is[index]);
+	  for (int coord = 0; coord < 3; coord++)
+	    sum[index][coord] += (dlink[coord]*(phi(i,j,k)-nucmax)
+				  *(phi(i,j,k)-nucmax)*dx*dy*dz);
+	}
+	free_energy += philink*(phi(i,j,k)-nucmax)*(phi(i,j,k)-nucmax)*dx*dy*dz;
+
       }
     }
   }
-  return;
+
+  for (unsigned index = 0; index < sum.size() ; index ++) {
+
+    for (int coord = 0; coord < 3; coord ++) {
+      MPI_Allreduce(&(sum[index][coord]),&(allsum[index][coord]),
+		    1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+      //      std::cout << "dfdx = " << allsum[index][coord] << std::endl;
+    }
+  }
+  MPI_Allreduce(&free_energy,&allfree_energy,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+
+  free_energy = allfree_energy;
+
+  return allsum;
 
 }
 
@@ -170,27 +197,88 @@ void Integrator::ode(std::complex<double> & y, std::complex<double> ynl,
 
 
 /* function expects that x-X_i etc are appropriately wrapped. */
-double Integrator::linker_phi(double x, double y, double z,
-			      const std::vector<double> & X_i)
+double Integrator::linker_phi(double x, double y, double z,double Lx,
+			      double Ly, double Lz,
+			      const std::vector<std::vector<double>> & X_is)
 {
-  return chi_LP*exp(-((x-X_i[0])*(x-X_i[0])+(y-X_i[1])*(y-X_i[1])
-		      +(z-X_i[2])*(z-X_i[2]))/(2*nucwidth*nucwidth));
+
+
+  
+  double tmp = 0;
+
+  double xtmp,ytmp,ztmp;
+
+  
+  for (const auto & X_i : X_is) {
+
+    xtmp = x;
+    ytmp = y;
+    ztmp = z;
+
+    while (xtmp-X_i[0] > Lx/2)
+      xtmp -= Lx;
+    while (xtmp-X_i[0] < -Lx/2)
+      xtmp += Lx;
+    
+    while (ytmp-X_i[1] > Ly/2)
+      ytmp -= Ly;
+    while (ytmp-X_i[1] < -Ly/2)
+      ytmp += Ly;
+
+    while (ztmp-X_i[2] > Lz/2)
+      ztmp -= Lz;
+    while (ztmp-X_i[2] < -Lz/2)
+      ztmp += Lz;
+    
+    tmp += exp(-((xtmp-X_i[0])*(xtmp-X_i[0]) + (ytmp-X_i[1])*(ytmp-X_i[1])
+		 + (ztmp-X_i[2])*(ztmp-X_i[2]))/(2*nucwidth*nucwidth));
+  }
+
+
+  
+  return chi_LP*tmp;
 }
 
 /* function expects that x-X_i etc are appropriately wrapped. */
 void Integrator::linker_derivative(std::vector<double> & out,
 				   double x, double y, double z,
+				   double Lx, double Ly, double Lz,
 				   const std::vector<double> & X_i)
 {
 
-  double tmp = linker_phi(x,y,z,X_i);
-  out[0] = tmp*(x-X_i[0])/(nucwidth*nucwidth);
-  out[1] = tmp*(y-X_i[1])/(nucwidth*nucwidth);
-  out[2] = tmp*(z-X_i[2])/(nucwidth*nucwidth);
+
+
+  double xtmp = x;
+  double ytmp = y;
+  double ztmp = z;
+  while (xtmp-X_i[0] > Lx/2)
+    xtmp -= Lx;
+  while (xtmp-X_i[0] < -Lx/2)
+    xtmp += Lx;
+  
+  while (ytmp-X_i[1] > Ly/2)
+    ytmp -= Ly;
+  while (ytmp-X_i[1] < -Ly/2)
+    ytmp += Ly;
+  
+  while (ztmp-X_i[2] > Lz/2)
+    ztmp -= Lz;
+  while (ztmp-X_i[2] < -Lz/2)
+    ztmp += Lz;
+  
+    
+  double tmp = exp(-((xtmp-X_i[0])*(xtmp-X_i[0]) + (ytmp-X_i[1])*(ytmp-X_i[1])
+		     + (ztmp-X_i[2])*(ztmp-X_i[2]))/(2*nucwidth*nucwidth));
+
+  
+  out[0] = chi_LP*(xtmp-X_i[0])/(nucwidth*nucwidth)*tmp;
+  out[1] = chi_LP*(ytmp-X_i[1])/(nucwidth*nucwidth)*tmp;
+  out[2] = chi_LP*(ztmp-X_i[2])/(nucwidth*nucwidth)*tmp;
+
+  
   return;
   
 }
-
 
 
 /*

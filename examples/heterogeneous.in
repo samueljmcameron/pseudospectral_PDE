@@ -2,15 +2,17 @@
 
 boxgrid      64 64 64
 boxdims      100.0 100.0 100.0
-steps        500000
-dt	     1e-4
+steps        70000
+dt	     5e-6
 dump_every   1000
-volFrac	     0.3 0.0
+volFrac	     0.2 0.0
 seed         ${seed}
-dump_file    heterogeneous/hetero
-
+dump_file    heterogeneous/fastfric
+thermo_every 100
+thermo_file  heterogeneous/fastfric_free_energy.txt
+restart	     30000 0.15
 
 
 # set polymer parameters
 
-build_solution mobility 1.0 volFH 0.01 gamma 100.0 chi 2.1 temp 1.0 chi_LP 4.0 chi_LL 1.0 nucmax 0.5 nucwidth 1.0
+build_solution mobility 1.0 volFH 0.01 gamma 100.0 chi 2.5 temp 1.0 chi_LP 10.0 chi_LL 1.0 nucmax 0.9 nucwidth 1.0

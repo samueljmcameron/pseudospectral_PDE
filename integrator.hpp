@@ -54,9 +54,10 @@ public:
   void initialize(fftw_MPI_3Darray<double> &,
 		  const double , const double );
   
-  void nonlinear(fftw_MPI_3Darray<double>&,
-		 const fftw_MPI_3Darray<double>&,
-		 const std::vector<double>&);
+  std::vector<std::vector<double>> nonlinear(fftw_MPI_3Darray<double>&,
+					     const fftw_MPI_3Darray<double>&,
+					     const std::vector<std::vector<double>> &,
+					     double &);
     
 
   double get_dt() { return dt; };
@@ -65,10 +66,11 @@ public:
   void integrate_real(int , int , int);
 
 
-  double linker_phi(double , double , double ,const std::vector<double> & );
+  double linker_phi(double , double , double ,double,double,double,
+		    const std::vector<std::vector<double>> & );
 
-  void linker_derivative(std::vector<double> &,
-			 double, double , double ,
+  void linker_derivative(std::vector<double> &,double, double ,
+			 double ,double,double, double,
 			 const std::vector<double> &);
 
   

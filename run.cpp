@@ -1,3 +1,5 @@
+#include <fstream>
+
 
 #include "fftw_mpi_3darray.hpp"
 #include "integrator.hpp"
@@ -10,7 +12,36 @@
 
 #include "run.hpp"
 
-void run(GlobalParams gp, SolutionParams solparams) {
+void X_1_of_t(std::vector<double> & X_1,
+	      const std::vector<double> & dFdX_1,double dt)
+{
+  double fric = 100.0;
+  X_1[0] += -dt*dFdX_1[0]*fric;
+  X_1[1] += -dt*dFdX_1[1]*fric;
+  X_1[2] += -dt*dFdX_1[2]*fric;
+  return;
+}
+
+
+void X_2_of_t(std::vector<double> & X_2,
+	      const std::vector<double> & dFdX_2,double dt)
+{
+  double fric = 100.0;
+  X_2[0] += -dt*dFdX_2[0]*fric;
+  X_2[1] += -dt*dFdX_2[1]*fric;
+  X_2[2] += -dt*dFdX_2[2]*fric;
+  return;
+  
+}
+
+std::string getLastLine(std::string filename);
+
+void put_in_vectors(std::vector<std::vector<double>> & X_is,
+		    std::string filename, MPI_Comm comm,int mpi_id);
+
+
+void run(GlobalParams gp, SolutionParams solparams,
+	 std::vector<std::vector<double>> &X_is) {
 
   
   fftw_MPI_3Darray<double> phi(gp.comm,"concentration",gp.realspace);
@@ -55,7 +86,11 @@ void run(GlobalParams gp, SolutionParams solparams) {
 
   integrator.initialize(phi,gp.volFrac,gp.variance);
 
-  std::vector<double> X_i = {0.0,0.0,5.0};
+  
+  std::vector<std::vector<double>> free_energy_derivs;
+
+  //  std::vector<std::vector<double>> free_energy_derivative;
+  
   double t = gp.starttime;
 
   std::string prefix = gp.dump_file + std::string("_p") + std::to_string(gp.id) ;
@@ -73,8 +108,17 @@ void run(GlobalParams gp, SolutionParams solparams) {
   fftw_MPI_3Darray<double> modulus(gp.comm,integrator.ft_phi.get_name()+std::string("_mod"),
 				   gp.fourier.get_positiveNx_grid());
 
+
+  
   int running_average_count = 0;
+
+  std::ofstream myfile;
+
+  
   if (gp.restart_flag) {
+
+
+    put_in_vectors(X_is,gp.thermo_file,gp.comm,gp.id);
     
     ioVTK::restartVTKcollection(collection_name);
     ioVTK::restartVTKcollection(complexcollection_name);
@@ -90,6 +134,17 @@ void run(GlobalParams gp, SolutionParams solparams) {
     }
 
     std::cout << "restarting!" << std::endl;
+
+    // insert file read here!
+
+
+
+    
+
+    if (gp.id == 0) {
+      myfile.open(gp.thermo_file,std::ios::app);
+      
+    }
 
   } else {
 
@@ -112,7 +167,6 @@ void run(GlobalParams gp, SolutionParams solparams) {
     }
     if (gp.id == 0) {
       modulus(0,0,0) = 0.0;
-      std::cout << "modulus at zero is = " << modulus(0,0,0) << std::endl;
     }
 
     fftw_execute(backward_phi);
@@ -122,18 +176,70 @@ void run(GlobalParams gp, SolutionParams solparams) {
     
     ioVTK::writeVTKcollectionMiddle(collection_name,fname_p,t);
     ioVTK::writeVTKcollectionMiddle(complexcollection_name,complexfname_p,t);
+
+
+    
+    if (gp.id == 0) {
+      myfile.open(gp.thermo_file);
+      myfile << "# t ";
+      for (unsigned index = 0; index < X_is.size() ; index ++) {
+	myfile << "\t (X_" << index << ")_x " << "(X_" << index << ")_y"
+	       << "(X_" << index << ")_z";
+      }
+      myfile << "\t F(X) ";
+      for (unsigned index = 0; index < X_is.size() ; index ++) {
+	myfile << "\t (dF/dX_" << index << ")_x " << "(dF/dX_" << index << ")_y"
+	       << "(dF/dX_" << index << ")_z";
+      }
+      myfile << std::endl;
+
+  }
+
+    
   }
 
 
-  std::vector<double> free_energy_derivative;
+
+
   
   TimeStep timestep(gp.comm,gp.mpi_size,gp.id,integrator.ft_phi.axis_size(0),
 		    integrator.ft_phi.axis_size(1));
-  
+
+  double free_energy;
   for (int it = 1+gp.startstep; it <= gp.steps+gp.startstep; it ++) {
+
+
+    free_energy_derivs = integrator.nonlinear(nonlinear,phi,X_is,free_energy); // compute nl(t) given phi(t)
+
+
+    if (gp.id == 0 && it % gp.thermo_every == 0) {
+      myfile << t;
+
+      for (unsigned index = 0; index < X_is.size() ; index ++) {
+
+	myfile << "\t " << X_is.at(index).at(0) << "\t "
+	       << X_is.at(index).at(1) << "\t "
+	       << X_is.at(index).at(2);
+      }
+
+      myfile << "\t " << free_energy;
+      for (unsigned index = 0; index < free_energy_derivs.size() ; index ++) {
+
+	myfile << "\t " << free_energy_derivs.at(index).at(0) << "\t "
+	       << free_energy_derivs.at(index).at(1) << "\t "
+	       << free_energy_derivs.at(index).at(2);
+      }
+      
+
+      myfile << std::endl;
+      
+    }
+
     t += integrator.get_dt();
 
-    integrator.nonlinear(nonlinear,phi,X_i); // compute nl(t) given phi(t)
+    X_1_of_t(X_is[0],free_energy_derivs[0],integrator.get_dt());
+    X_2_of_t(X_is[1],free_energy_derivs[1],integrator.get_dt());
+    
     
     fftw_execute(forward_phi);
     fftw_execute(forward_nonlinear);
@@ -151,7 +257,6 @@ void run(GlobalParams gp, SolutionParams solparams) {
       modulus /= running_average_count;
       if (gp.id == 0) {
 	modulus(0,0,0) = 0.0;
-	std::cout << "modulus at zero is = " << modulus(0,0,0) << std::endl;
       }
       
       running_average_count = 0;
@@ -173,9 +278,13 @@ void run(GlobalParams gp, SolutionParams solparams) {
     //      = link.free_energy_derivative(X_i,integrator.linker_phi,
     //				    integrator.linker_derivative,phi);
 
-    
+
   }
 
+  if (gp.id == 0) {
+    myfile.close();
+  }
+  
   ioVTK::writeVTKcollectionFooter(collection_name);
   ioVTK::writeVTKcollectionFooter(complexcollection_name);
   
@@ -184,5 +293,87 @@ void run(GlobalParams gp, SolutionParams solparams) {
   fftw_destroy_plan(forward_nonlinear);
   fftw_destroy_plan(backward_nonlinear);
 
+
   return;
+}
+
+
+
+std::string getLastLine(std::string filename)
+{
+
+  std::ifstream myfile (filename);
+  std::string lastline;
+
+  if (myfile) {
+
+    // assumes that last line is just a newline char, hence the -2 below (vs -1)
+    myfile.seekg(-2,myfile.end);
+
+    char ch;
+
+    myfile.get(ch);
+
+    while (ch != '\n' && myfile.tellg() >1) {
+    
+      myfile.seekg(-2,myfile.cur);
+      myfile.get(ch);
+    }
+
+
+
+
+    std::getline(myfile,lastline);
+
+  } else {
+    throw std::runtime_error("File " + std::string(filename) + " does not exist");
+  }
+
+  myfile.close();
+  return lastline;
+}
+
+
+void put_in_vectors(std::vector<std::vector<double>> & X_is,
+		    std::string filename, MPI_Comm comm,int mpi_id)
+{
+
+  std::string finalline;
+  int signal = 0;
+  if (mpi_id == 0) {
+
+    try {
+      finalline = getLastLine(filename);
+    }
+    catch (const std::runtime_error & error) {
+      signal = -1;
+    }
+
+  }
+
+  MPI_Bcast(&signal,1,MPI_INT,0,comm);
+
+  if (signal == -1) {
+    throw std::runtime_error("File " + std::string(filename) + " does not exist");    
+  }
+
+  std::istringstream iss(finalline);
+  
+  std::string subs;
+  if (mpi_id == 0) {
+    iss >> subs;
+  }
+
+  for (auto &cmp : X_is) {
+    for (int i = 0; i < 3; i++) {
+      if (mpi_id == 0) {
+	iss >> cmp.at(i);
+      }
+
+      MPI_Bcast(&cmp.at(i),1,MPI_DOUBLE,0,comm);
+    }
+  }
+
+  return;
+  
 }
