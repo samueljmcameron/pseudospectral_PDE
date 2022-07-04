@@ -1,12 +1,12 @@
-#ifndef SMATRIX_HPP
-#define SMATRIX_HPP
+#ifndef PSPDE_SMATRIX_HPP
+#define PSPDE_SMATRIX_HPP
 
 #include <iostream>
 #include <vector>
 #include <string>
 
 
-
+namespace psPDE {
 template <typename T>
 class sMatrix
 {
@@ -69,5 +69,5 @@ public:
 
 
 
-
+};
 #endif

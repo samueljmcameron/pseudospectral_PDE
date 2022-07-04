@@ -1,5 +1,5 @@
-#ifndef INTEGRATOR_HPP
-#define INTEGRATOR_HPP
+#ifndef PSPDE_INTEGRATOR_HPP
+#define PSPDE_INTEGRATOR_HPP
 
 #include <random>
 #include <complex>
@@ -8,6 +8,7 @@
 #include "griddata.hpp"
 #include "solutionparams.hpp"
 
+namespace psPDE {
 class Integrator
 {
 private:
@@ -76,5 +77,5 @@ public:
   
 
 };
-
+};
 #endif

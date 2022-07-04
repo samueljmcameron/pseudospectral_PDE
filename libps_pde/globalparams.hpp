@@ -1,5 +1,5 @@
-#ifndef GLOBALPARAMS_HPP
-#define GLOBALPARAMS_HPP
+#ifndef PSPDE_GLOBALPARAMS_HPP
+#define PSPDE_GLOBALPARAMS_HPP
 
 #include <fstream>
 #include <set>
@@ -8,7 +8,7 @@
 
 #include "input.hpp"
 #include "griddata.hpp"
-
+namespace psPDE {
 class GlobalParams {
 private:
 
@@ -17,17 +17,17 @@ private:
       "thermo_file","boxgrid", "boxdims",
       "seed","restart"};
   
-  const int default_steps = 100;
-  const int default_grid = 64;
-  const double default_length = 100.0;
-  const double default_dt = 1e-4;
-  const int default_dump_every = 100;
-  const int default_thermo_every = 100;
-  const std::string default_dump_file{"dump"};
-  const std::string default_thermo_file{"thermo"};
-  const double default_volFrac = 0.3;
-  const double default_variance = 0.0;
-  const int default_seed = 129480;
+  int default_steps;
+  int default_grid;
+  double default_length;
+  double default_dt;
+  int default_dump_every;
+  int default_thermo_every;
+  std::string default_dump_file;
+  std::string default_thermo_file;
+  double default_volFrac;
+  double default_variance;
+  int default_seed;
 
 
   bool fft_is_transposed;
@@ -58,4 +58,6 @@ public:
   
 };
 
+
+};
 #endif

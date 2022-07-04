@@ -94,29 +94,29 @@ int main(int argc, char **argv)
   std::string line;
   std::vector<std::string> splitvec;
     
-  GlobalParams gp(comm,id,mpi_size,infile,variables,line);
+  psPDE::GlobalParams gp(comm,id,mpi_size,infile,variables,line);
 
 
 
   line = line.substr(0,line.find_first_of("#"));
-  splitvec = input::split_line(line);
+  splitvec = psPDE::input::split_line(line);
   
 
   while (std::getline(infile,line) &&
 	 splitvec[0] != "build_solution") {
 
     line = line.substr(0,line.find_first_of("#"));
-    splitvec = input::split_line(line);
+    splitvec = psPDE::input::split_line(line);
     
   }
 
   splitvec.erase(splitvec.begin());
 
   for (auto &c : splitvec)
-    input::convertVariable(c,variables);
+    psPDE::input::convertVariable(c,variables);
   
   
-  SolutionParams solparams(splitvec);
+  psPDE::SolutionParams solparams(splitvec);
 
 
   if (id == 0) {

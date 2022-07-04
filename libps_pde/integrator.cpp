@@ -1,16 +1,17 @@
 #include "integrator.hpp"
 
 
-
+using namespace psPDE;
 
 Integrator::Integrator(MPI_Comm comm,const GridData& fourier, const int seed,
 		       const SolutionParams& solparams,const double dt)
-  : ft_phi(comm,"ft_phi",fourier), ft_nonlinear(comm,"ft_nl",fourier),
-    seed(seed),
-    real_dist(-0.5,0.5),mobility(solparams.mobility),gamma(solparams.gamma),
-    temp(solparams.temp),chi(solparams.chi), volFH(solparams.volFH),
-    chi_LP(solparams.chi_LP),nucmax(solparams.nucmax),nucwidth(solparams.nucwidth),
-    dt(dt),normalization(sqrt(1.0/(fourier.get_Nx()*fourier.get_Ny()*fourier.get_Nz())))
+  : 
+  seed(seed),mobility(solparams.mobility),gamma(solparams.gamma),
+  temp(solparams.temp),chi(solparams.chi), volFH(solparams.volFH),
+  chi_LP(solparams.chi_LP),nucmax(solparams.nucmax),nucwidth(solparams.nucwidth),
+  normalization(sqrt(1.0/(fourier.get_Nx()*fourier.get_Ny()*fourier.get_Nz()))),
+  dt(dt),real_dist(-0.5,0.5),ft_phi(comm,"ft_phi",fourier),
+  ft_nonlinear(comm,"ft_nl",fourier)
 {
 
   gen.seed(seed);
@@ -50,7 +51,7 @@ std::vector<std::vector<double>> Integrator::nonlinear(fftw_MPI_3Darray<double>&
 						       double & free_energy)
 {
 
-  int real0start = phi.get_local0start();
+
   double dx = phi.grid.get_dx();
   double dy = phi.grid.get_dy();
   double dz = phi.grid.get_dz();
@@ -188,7 +189,7 @@ void Integrator::integrate_real(int i, int j, int k)
 void Integrator::ode(std::complex<double> & y, std::complex<double> ynl,
 		   std::complex<double> rnd, double q2)
 {
-  y = (y-mobility*q2*dt*(ynl+gamma*q2*y))*normalization*normalization +  rnd;
+  y = (y-mobility*q2*dt*(ynl+temp/volFH*gamma*q2*y))*normalization*normalization +  rnd;
   return;
 }
 

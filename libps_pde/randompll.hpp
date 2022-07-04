@@ -1,5 +1,5 @@
-#ifndef RANDOMPLL_HPP
-#define RANDOMPLL_HPP
+#ifndef PSPDE_RANDOMPLL_HPP
+#define PSPDE_RANDOMPLL_HPP
 
 #include <random>
 #include <vector>
@@ -7,7 +7,7 @@
 
 #include <mpi.h>
 
-
+namespace psPDE {
 class RandomPll {
 public:
   RandomPll(MPI_Comm,const int, const int,const int);
@@ -23,5 +23,5 @@ private:
 
   std::vector<int> processor_seeds;
 };
-
+};
 #endif

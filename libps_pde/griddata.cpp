@@ -3,6 +3,8 @@
 #include "griddata.hpp"
 #include <cmath>
 
+using namespace psPDE;
+
 GridData::GridData(const int Nz, const int Ny, const int Nx,
 		   const double Lz, const double Ly, const double Lx)
   : Nz(Nz), Ny(Ny), Nx(Nx), Lz(Lz), Ly(Ly), Lx(Lx)

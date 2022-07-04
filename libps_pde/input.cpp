@@ -3,6 +3,8 @@
 
 #include "input.hpp"
 
+namespace psPDE {
+
 namespace input {
   std::vector<std::string> split_line(std::string& line)
   {
@@ -113,4 +115,5 @@ namespace input {
     
     return;
   }
+}
 }

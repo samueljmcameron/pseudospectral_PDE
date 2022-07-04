@@ -1,5 +1,5 @@
-#ifndef FFTW_MPI_3DARRAY_HPP
-#define FFTW_MPI_3DARRAY_HPP
+#ifndef PSPDE_FFTW_MPI_3DARRAY_HPP
+#define PSPDE_FFTW_MPI_3DARRAY_HPP
 
 #include <iostream>
 #include <fftw3-mpi.h>
@@ -7,6 +7,8 @@
 #include <string>
 
 #include "griddata.hpp"
+
+namespace psPDE {
 
 template <typename T>
 class fftw_MPI_3Darray 
@@ -83,7 +85,7 @@ public:
   
   template <typename T0>
   friend std::ostream& operator<< (std::ostream& out,
-				   const fftw_MPI_3Darray<T0> & in);
+				     const fftw_MPI_3Darray<T0> & in);
 
 
 
@@ -112,5 +114,6 @@ public:
 
 
 
+};
 
 #endif

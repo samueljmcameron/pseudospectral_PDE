@@ -15,4 +15,4 @@ restart	     30000 0.15
 
 # set polymer parameters
 
-build_solution mobility 1.0 volFH 0.01 gamma 100.0 chi 2.5 temp 1.0 chi_LP 10.0 chi_LL 1.0 nucmax 0.9 nucwidth 1.0
+build_solution mobility 1.0 volFH 0.01 gamma 1.0 chi 2.5 temp 1.0 chi_LP 10.0 chi_LL 1.0 nucmax 0.9 nucwidth 1.0

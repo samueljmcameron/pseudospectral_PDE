@@ -5,7 +5,7 @@
 #include "globalparams.hpp"
 #include "solutionparams.hpp"
 
-void run(GlobalParams gp, SolutionParams solparams,
+void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
 	 std::vector<std::vector<double>> & X_is);
 
 #endif

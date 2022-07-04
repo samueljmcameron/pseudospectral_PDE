@@ -1,9 +1,11 @@
-#ifndef INPUT_HPP
-#define INPUT_HPP
+#ifndef PSPDE_INPUT_HPP
+#define PSPDE_INPUT_HPP
 
 #include <string>
 #include <vector>
 #include <map>
+
+namespace psPDE {
 namespace input {
   std::vector<std::string> split_line(std::string&);
   bool isInt(std::string&,int&,std::string);
@@ -12,4 +14,5 @@ namespace input {
 		       std::map<std::string, std::string> const&);
   
 }
+};
 #endif

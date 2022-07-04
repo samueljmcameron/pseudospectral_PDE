@@ -1,5 +1,5 @@
-#ifndef IOVTK_HPP
-#define IOVTK_HPP
+#ifndef PSPDE_IOVTK_HPP
+#define PSPDE_IOVTK_HPP
 
 #include <string>
 #include <vector>
@@ -11,7 +11,7 @@
 //#include "globalinfompi.hpp"
 
 
-
+namespace psPDE {
 namespace ioVTK {
   typedef fftw_MPI_3Darray<double> ft_dub;
   //  template <typename T>
@@ -20,7 +20,7 @@ namespace ioVTK {
   //  template <ptrdiff_t NZ, ptrdiff_t NY, ptrdiff_t NX>
   void writeVTKImageData(std::string,const std::vector<ft_dub*>,
 			 const GridData&);
-  void readVTKImageData(std::vector<ft_dub*>, std::string ,const GridData&);
+  void readVTKImageData(std::vector<ft_dub*>, std::string);
   
   void writeVTKcollectionHeader(const std::string);
   void writeVTKcollectionMiddle(const std::string,
@@ -35,7 +35,7 @@ namespace ioVTK {
 
   
 }
-
+};
 
 
 #endif

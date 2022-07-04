@@ -1,5 +1,5 @@
-#ifndef CONJPLANE_HPP
-#define CONJPLANE_HPP
+#ifndef PSPDE_CONJPLANE_HPP
+#define PSPDE_CONJPLANE_HPP
 
 #include <complex>
 #include <vector>
@@ -8,6 +8,7 @@
 #include "smatrix.hpp"
 #include "integrator.hpp"
 
+namespace psPDE{
 class ConjPlane
 {
 
@@ -84,4 +85,5 @@ public:
 
 };
 
+};
 #endif

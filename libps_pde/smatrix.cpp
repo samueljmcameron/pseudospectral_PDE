@@ -3,6 +3,8 @@
 
 #include "smatrix.hpp"
 
+using namespace psPDE;
+
 template <typename T>
 sMatrix<T>::sMatrix()
 /*
@@ -199,9 +201,9 @@ std::ostream& sMatrix<T>::_write_ostream(std::ostream &out,
 
 template class sMatrix<double>;
 template class sMatrix<std::complex<double>>;
-template std::ostream& operator<< (std::ostream& ,
-				   const sMatrix<double>&);
-template std::ostream& operator<< (std::ostream& ,
-				   const sMatrix<std::complex<double>>&);
+//template std::ostream& operator<< (std::ostream& ,
+//				   const sMatrix<double>&);
+//template std::ostream& operator<< (std::ostream& ,
+//				   const sMatrix<std::complex<double>>&);
 
 

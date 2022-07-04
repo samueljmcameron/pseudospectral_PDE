@@ -2,7 +2,7 @@
 #include <typeinfo>
 #include "fftw_mpi_3darray.hpp"
 
-
+using namespace psPDE;
 template <typename T>
 fftw_MPI_3Darray<T>::fftw_MPI_3Darray(MPI_Comm comm,std::string name,
 				      const int Nz,const int Ny,
@@ -406,7 +406,7 @@ std::ostream& fftw_MPI_3Darray<T>::_write_ostream(std::ostream &out,
     out << arr[N0-1 + (i*M0 + j ) * spacer] <<  inner[1]
 	<< innerdelim;
   }
-  int jdum = M0 -1;
+
   out << inner[0];
   for (int k = 0; k < N0-1; k++) {
     out << arr[k + (i*M0 + M0-1 ) * spacer] << delim;
@@ -422,10 +422,10 @@ std::ostream& fftw_MPI_3Darray<T>::_write_ostream(std::ostream &out,
 
 template class fftw_MPI_3Darray<double>;
 template class fftw_MPI_3Darray<std::complex<double>>;
-template std::ostream& operator<< (std::ostream& ,
-				   const fftw_MPI_3Darray<double>&);
-template std::ostream& operator<< (std::ostream& ,
-				   const fftw_MPI_3Darray<std::complex<double>>&);
+//template std::ostream& operator<< (std::ostream& ,
+//				   const fftw_MPI_3Darray<double>&);
+//template std::ostream& operator<< (std::ostream& ,
+//				   const fftw_MPI_3Darray<std::complex<double>>&);
 
 
 //template std::ostream& operator= (fftw_MPI_3Darray<double>);

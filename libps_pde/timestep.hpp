@@ -1,10 +1,12 @@
-#ifndef TIMESTEP_HPP
-#define TIMESTEP_HPP
+#ifndef PSPDE_TIMESTEP_HPP
+#define PSPDE_TIMESTEP_HPP
 
 #include <mpi.h>
 #include "integrator.hpp"
 #include "conjplane.hpp"
 
+
+namespace psPDE {
 class TimeStep
 {
 
@@ -17,6 +19,7 @@ public:
 	  const int ,const int);
   ~TimeStep();
   void update(double ,Integrator &);
+};
 };
 
 #endif

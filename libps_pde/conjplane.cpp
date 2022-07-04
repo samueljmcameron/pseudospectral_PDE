@@ -1,5 +1,6 @@
 #include "conjplane.hpp"
 
+using namespace psPDE;
 
 /* This class writes ALMOST all data in a plane parallel to whatever
    axis (call it y) is split into different MPI processes
@@ -10,9 +11,9 @@
 ConjPlane::ConjPlane(int numprocs,int mpi_id,
 		     MPI_Comm communicator,std::vector<int> all_cNzs,
 		     int Ny)
-  :   block0(), block1(), block2(), block3(),
-      line0(), line1(), line2(), line3(), nreq(4),
-      mpi_size(numprocs),id(mpi_id),comm(communicator), cNy(Ny)
+  :   mpi_size(numprocs),id(mpi_id),comm(communicator), cNy(Ny),
+      nreq(4), block0(), block1(), block2(), block3(),
+      line0(), line1(), line2(), line3()
 {
 
 
@@ -249,7 +250,7 @@ void ConjPlane::last(Integrator & integrator,int nx)
 
 {
   
-  int cNz = integrator.ft_phi.axis_size(0);
+
 
   
   // send from far right corner of bottom right square
@@ -377,7 +378,6 @@ void ConjPlane::line_last(Integrator & integrator,int nx)
   
 {
   
-  int cNz = integrator.ft_phi.axis_size(0);
   int ny = cNy/2;
   
   // send from far right corner of bottom right square
@@ -1478,7 +1478,6 @@ void ConjPlane::line_middle_even_equal(Integrator & integrator,int nx)
 
 
   // don't forget Nz/2 term!
-  int nz = 0;
 
   int ny = cNy/2;
 

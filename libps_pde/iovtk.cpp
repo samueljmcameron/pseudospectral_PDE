@@ -1,16 +1,17 @@
 #include <stdexcept>
 #include <fstream>
-#include <complex>
 
-#include "writevtk.hpp"
+#include <algorithm>
+
+#include "iovtk.hpp"
 
 
-
+using namespace psPDE;
 
 /* Simple function to write a vtk file with binary data. */
-void writeVTK::writeVTKImageData(std::string fname,
-				 const std::vector<ft_dub*>& scalar_outputs,
-				 GridData grid)
+void ioVTK::writeVTKImageData(std::string fname,
+			      const std::vector<ft_dub*> scalar_outputs,
+			      const GridData& grid)
 /*============================================================================*/
 /*
   Write scalar image data to a vtk (and paraview) compatible file
@@ -27,9 +28,9 @@ void writeVTK::writeVTKImageData(std::string fname,
       of type fftw_MPI_3Darray<double>.
 
   grid : struct of grid data
-      Contains the following attributes: Ox, Oy, Oz for the
+      Contains the following attributes: get_Ox(), get_Oy(), get_Oz() for the
       start points of the grid (i.e. if you want x component to start
-      at -4, then Ox=-4), and dx, dy, dz for the grid spacings.
+      at -4, then Ox=-4), and get_dx(), get_dy(), get_dz() for the grid spacings.
 */
 /*============================================================================*/
 
@@ -45,8 +46,6 @@ void writeVTK::writeVTKImageData(std::string fname,
 
   
   unsigned int bytelength = Nx0*Ny0*Nz0*sizeof(double);
-
-
   
   for (const auto &elem : scalar_outputs)
     if ( elem->axis_size(0) != Nz0 || elem->axis_size(1) != Ny0
@@ -55,13 +54,19 @@ void writeVTK::writeVTKImageData(std::string fname,
   
   
   auto myfile = std::fstream(fname, std::ios::out | std::ios::binary);
+
+  if (not myfile.is_open()) {
+    throw std::runtime_error(std::string("Cannot open file ") + fname);
+  }
+
+  
   myfile << "<?xml version=\"1.0\"?>" << std::endl
 	 << "<VTKFile type=\"ImageData\"  version=\"1.0\""
 	 << " byte_order=\"LittleEndian\">" << std::endl
 	 << "<ImageData WholeExtent=\"0 " << Nx0-1 << " 0 "
 	 << Ny0-1 << " " << zstart <<  "  " << Nz0+zstart-1 << "\" "
-	 <<"Origin=\"" << grid.Ox << " " << grid.Oy << " " << grid.Oz << " \" "
-	 << "Spacing=\"" << grid.dx << " " << grid.dy << " " << grid.dz << " "
+	 <<"Origin=\"" << grid.get_Ox() << " " << grid.get_Oy() << " " << grid.get_Oz() << " \" "
+	 << "Spacing=\"" << grid.get_dx() << " " << grid.get_dy() << " " << grid.get_dz() << " "
 	 << "\">" << std::endl
 	 << "<Piece Extent=\"0 " << Nx0-1 << " 0 "
 	 << Ny0-1 << " " << zstart << " " << Nz0+zstart-1 << "\">" << std::endl
@@ -101,10 +106,104 @@ void writeVTK::writeVTKImageData(std::string fname,
   
 }
 
+void ioVTK::writeVTKcollectionHeader(const std::string fname)
+{
+  auto myfile = std::ofstream(fname);
+  if (not myfile.is_open()) {
+    throw std::runtime_error(std::string("Cannot open file ") + fname);
+  }
+  
+  myfile << "<?xml version=\"1.0\"?>" << std::endl
+	 << "<VTKFile type=\"Collection\"  version=\"1.0\""
+	 << " byte_order=\"LittleEndian\">" << std::endl
+	 << "<Collection>" << std::endl;
+
+
+  myfile.close();
+  
+
+}
+
+void ioVTK::writeVTKcollectionMiddle(const std::string collectionfname,
+				     const std::string filename,
+				     const double time)
+{
+
+  size_t num_slashes = std::count(collectionfname.begin(), collectionfname.end(), '/');
+
+  std::string prepath = "";
+  for (int i = 0; i < num_slashes; i++)
+    prepath += std::string("../");
+  
+  auto myfile = std::fstream(collectionfname,std::ios_base::app);
+  if (not myfile.is_open()) {
+    throw std::runtime_error(std::string("Cannot open file ") + collectionfname);
+  }
+  
+  myfile << "<DataSet timestep=\"" << time << "\" group=\"\" part=\"0\""
+	 << " file=\"" << prepath+filename << "\"/>" << std::endl;
+
+  myfile.close();
+  
+}
+
+
+void ioVTK::writeVTKcollectionFooter(const std::string fname)
+{
+  auto myfile = std::fstream(fname, std::ios_base::app);
+  if (not myfile.is_open()) {
+    throw std::runtime_error(std::string("Cannot open file ") + fname);
+  }
+  
+  myfile << "</Collection>" << std::endl
+	 << "</VTKFile>";
+  
+  myfile.close();
+}
+
+void ioVTK::restartVTKcollection(const std::string fname)
+/* restart the collection by copying the current file (up to the collection
+   end) into a new file called "restart" + oldfname. */
+   
+{
+
+  auto oldfile = std::ifstream(fname);
+  if (not oldfile.is_open()) {
+    throw std::runtime_error(std::string("Cannot open file ") + fname);
+  }
+
+
+  std::vector<std::string> lines;
+  std::string stopline = "";
+
+  while (stopline != "</Collection>") {
+    lines.push_back(stopline);
+    std::getline(oldfile,stopline);
+  }
+  oldfile.close();
+
+  
+  lines.erase(lines.begin());  
+
+  auto newfile = std::ofstream(fname);
+  if (not newfile.is_open()) {
+    throw std::runtime_error(std::string("Cannot open file ") + fname);
+  }
+
+  for (const auto &line : lines)
+    newfile << line << std::endl;;
+  
+
+
+  newfile.close();
+
+  return;
+}
+
 
 /* Simple function to write a vtk file with binary data. */
-void writeVTK::readVTKImageData(std::vector<ft_dub*>& scalar_outputs,
-				std::string fname, GridData grid)
+void ioVTK::readVTKImageData(std::vector<ft_dub*> scalar_outputs,
+			     std::string fname)
 /*============================================================================*/
 /*
   Write scalar image data to a vtk (and paraview) compatible file
@@ -121,17 +220,13 @@ void writeVTK::readVTKImageData(std::vector<ft_dub*>& scalar_outputs,
       Name of file to read from with extension (either ".vti" or ".pvti").
 
   grid : struct of grid data
-      Contains the following attributes: Ox, Oy, Oz for the
+      Contains the following attributes: get_Ox(), get_Oy(), get_Oz() for the
       start points of the grid (i.e. if you want x component to start
-      at -4, then Ox=-4), and dx, dy, dz for the grid spacings.
+      at -4, then get_Ox()=-4), and get_dx(), get_dy(), get_dz() for the grid spacings.
 */
 /*============================================================================*/
 
 {
-
-  // determine byte length of input data
-  const int zstart = scalar_outputs[0]->get_local0start();
-
   
   const int Nz0 = scalar_outputs[0]->axis_size(0);
   const int Ny0 = scalar_outputs[0]->axis_size(1);
@@ -185,8 +280,8 @@ void writeVTK::readVTKImageData(std::vector<ft_dub*>& scalar_outputs,
 
 
 /*
-void writeVTK::writeVTK_P_ImageData(std::string fname,
-				 const std::vector<ft_dub*>& scalar_outputs,
+void ioVTK::writeVTK_P_ImageData(std::string fname,
+				 const std::vector<ft_dub*> scalar_outputs,
 				 GridData grid, GlobalInfoMPI info)
 {
 
@@ -215,8 +310,8 @@ void writeVTK::writeVTK_P_ImageData(std::string fname,
 	 << " byte_order=\"LittleEndian\">" << std::endl
 	 << "<PImageData WholeExtent=\"0 " << Nx0-1 << " 0 "
 	 << Ny0-1 << " 0 "  << globalNz-1 << "\" "
-	 <<"Origin=\"" << grid.Ox << " " << grid.Oy << " " << grid.Oz << " \" "
-	 << "Spacing=\"" << grid.dx << " " << grid.dy << " " << grid.dz << "\" "
+	 <<"Origin=\"" << grid.get_Ox() << " " << grid.get_Oy() << " " << grid.get_Oz() << " \" "
+	 << "Spacing=\"" << grid.get_dx() << " " << grid.get_dy() << " " << grid.get_dz() << "\" "
 	 << "GhostLevel=\"0\">" << std::endl
 	 << "<PPointData Scalars=\"scalars\">" << std::endl;
 

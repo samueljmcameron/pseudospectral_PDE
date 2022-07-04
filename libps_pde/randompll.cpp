@@ -1,7 +1,9 @@
 #include "randompll.hpp"
 
+using namespace psPDE;
+
 RandomPll::RandomPll(MPI_Comm comm, const int id, const int seed, const int numprocs)
-  : comm(comm),id(id),seed(seed), integer_dist(), processor_seeds(numprocs)
+  : seed(seed),id(id),comm(comm), integer_dist(), processor_seeds(numprocs)
 {
 
   gen.seed(seed);

@@ -1,6 +1,8 @@
-#ifndef GRIDDATA_HPP
-#define GRIDDATA_HPP
+#ifndef PSPDE_GRIDDATA_HPP
+#define PSPDE_GRIDDATA_HPP
 
+
+namespace psPDE {
 class GridData {
   
   int Nz, Ny, Nx;
@@ -91,4 +93,5 @@ public:
   
 };
 
+};
 #endif

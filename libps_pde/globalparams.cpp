@@ -3,15 +3,22 @@
 
 #include "globalparams.hpp"
 
+using namespace psPDE;
+
+
 GlobalParams::GlobalParams(const MPI_Comm comm, const int id, const int mpi_size,
 			   std::ifstream& input,
 			   std::map<std::string,std::string> const& varMap,
 			   std::string& lastline) :
-  steps(default_steps),dt(default_dt),volFrac(default_volFrac),
-  dump_every(default_dump_every), dump_file(default_dump_file),
-  thermo_every(default_thermo_every), thermo_file(default_thermo_file),
-  id(id),comm(comm),mpi_size(mpi_size),variance(default_variance),
-  restart_flag(false),starttime(0.0),startstep(0),seed(default_seed),
+
+  default_steps(100),default_grid(64),default_length(100.0),default_dt(1e-4),
+  default_dump_every(100),default_thermo_every(100),default_dump_file("dump"),
+  default_thermo_file("thermo"),default_volFrac(0.3),default_variance(0.0),
+  default_seed(129480),restart_flag(false),startstep(0),starttime(0.0),
+  steps(default_steps),seed(default_seed),dump_every(default_dump_every),
+  thermo_every(default_thermo_every),dt(default_dt),volFrac(default_volFrac),
+  variance(default_variance),dump_file(default_dump_file),
+  thermo_file(default_thermo_file),comm(comm), id(id),mpi_size(mpi_size),
   realspace(default_grid,default_grid,default_grid,
 	    default_length,default_length,default_length),
   fourier(realspace)

@@ -1,8 +1,9 @@
 #include "timestep.hpp"
 
+using namespace psPDE;
 TimeStep::TimeStep(const MPI_Comm comm,const int mpi_size, const int id,
 		   const int local_fftNz,const int local_fftNy)
-  : comm(comm),mpi_size(mpi_size),id(id)
+  : comm(comm),id(id),mpi_size(mpi_size)
 {
   
   std::vector<int> all_local_fftNzs(mpi_size);

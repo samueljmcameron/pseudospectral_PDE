@@ -40,17 +40,17 @@ void put_in_vectors(std::vector<std::vector<double>> & X_is,
 		    std::string filename, MPI_Comm comm,int mpi_id);
 
 
-void run(GlobalParams gp, SolutionParams solparams,
+void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
 	 std::vector<std::vector<double>> &X_is) {
 
   
-  fftw_MPI_3Darray<double> phi(gp.comm,"concentration",gp.realspace);
-  fftw_MPI_3Darray<double> nonlinear(gp.comm,"chempotential",gp.realspace);
+  psPDE::fftw_MPI_3Darray<double> phi(gp.comm,"concentration",gp.realspace);
+  psPDE::fftw_MPI_3Darray<double> nonlinear(gp.comm,"chempotential",gp.realspace);
 
 
-  RandomPll rpll(gp.comm,gp.id,gp.seed,gp.mpi_size);
+  psPDE::RandomPll rpll(gp.comm,gp.id,gp.seed,gp.mpi_size);
   
-  Integrator integrator(gp.comm,gp.fourier,rpll.get_processor_seed(),solparams,gp.dt);
+  psPDE::Integrator integrator(gp.comm,gp.fourier,rpll.get_processor_seed(),solparams,gp.dt);
 
   fftw_plan forward_phi, backward_phi;
   fftw_plan forward_nonlinear, backward_nonlinear;
@@ -105,8 +105,8 @@ void run(GlobalParams gp, SolutionParams solparams,
 
   std::string complexcollection_name = complexprefix + std::string(".pvd");
   
-  fftw_MPI_3Darray<double> modulus(gp.comm,integrator.ft_phi.get_name()+std::string("_mod"),
-				   gp.fourier.get_positiveNx_grid());
+  psPDE::fftw_MPI_3Darray<double> modulus(gp.comm,integrator.ft_phi.get_name()+std::string("_mod"),
+					  gp.fourier.get_positiveNx_grid());
 
 
   
@@ -120,10 +120,10 @@ void run(GlobalParams gp, SolutionParams solparams,
 
     put_in_vectors(X_is,gp.thermo_file,gp.comm,gp.id);
     
-    ioVTK::restartVTKcollection(collection_name);
-    ioVTK::restartVTKcollection(complexcollection_name);
+    psPDE::ioVTK::restartVTKcollection(collection_name);
+    psPDE::ioVTK::restartVTKcollection(complexcollection_name);
     
-    ioVTK::readVTKImageData({&phi},fname_p,gp.realspace);
+    psPDE::ioVTK::readVTKImageData({&phi},fname_p);
     
     for (int i = 0; i < integrator.ft_phi.axis_size(0); i++) {
       for (int j = 0; j < integrator.ft_phi.axis_size(1); j++) {
@@ -148,8 +148,8 @@ void run(GlobalParams gp, SolutionParams solparams,
 
   } else {
 
-    ioVTK::writeVTKcollectionHeader(collection_name);
-    ioVTK::writeVTKcollectionHeader(complexcollection_name);
+    psPDE::ioVTK::writeVTKcollectionHeader(collection_name);
+    psPDE::ioVTK::writeVTKcollectionHeader(complexcollection_name);
 
     fftw_execute(forward_phi);
     integrator.ft_phi.mod(modulus);
@@ -171,11 +171,11 @@ void run(GlobalParams gp, SolutionParams solparams,
 
     fftw_execute(backward_phi);
     
-    ioVTK::writeVTKImageData(fname_p,{&phi},gp.realspace);
-    ioVTK::writeVTKImageData(complexfname_p,{&modulus},modulus.grid);
+    psPDE::ioVTK::writeVTKImageData(fname_p,{&phi},gp.realspace);
+    psPDE::ioVTK::writeVTKImageData(complexfname_p,{&modulus},modulus.grid);
     
-    ioVTK::writeVTKcollectionMiddle(collection_name,fname_p,t);
-    ioVTK::writeVTKcollectionMiddle(complexcollection_name,complexfname_p,t);
+    psPDE::ioVTK::writeVTKcollectionMiddle(collection_name,fname_p,t);
+    psPDE::ioVTK::writeVTKcollectionMiddle(complexcollection_name,complexfname_p,t);
 
 
     
@@ -202,7 +202,7 @@ void run(GlobalParams gp, SolutionParams solparams,
 
 
   
-  TimeStep timestep(gp.comm,gp.mpi_size,gp.id,integrator.ft_phi.axis_size(0),
+  psPDE::TimeStep timestep(gp.comm,gp.mpi_size,gp.id,integrator.ft_phi.axis_size(0),
 		    integrator.ft_phi.axis_size(1));
 
   double free_energy;
@@ -261,14 +261,14 @@ void run(GlobalParams gp, SolutionParams solparams,
       
       running_average_count = 0;
 
-      ioVTK::writeVTKImageData(complexfname_p,{&modulus},modulus.grid);
-      ioVTK::writeVTKcollectionMiddle(complexcollection_name,complexfname_p,t);
+      psPDE::ioVTK::writeVTKImageData(complexfname_p,{&modulus},modulus.grid);
+      psPDE::ioVTK::writeVTKcollectionMiddle(complexcollection_name,complexfname_p,t);
       fftw_execute(backward_phi); // get phi(t+dt)
 
       integrator.initialize(modulus,0,0);
 
-      ioVTK::writeVTKImageData(fname_p,{&phi},phi.grid);
-      ioVTK::writeVTKcollectionMiddle(collection_name,fname_p,t);
+      psPDE::ioVTK::writeVTKImageData(fname_p,{&phi},phi.grid);
+      psPDE::ioVTK::writeVTKcollectionMiddle(collection_name,fname_p,t);
     } else {
       fftw_execute(backward_phi); // get phi(t+dt)
     }
@@ -285,8 +285,8 @@ void run(GlobalParams gp, SolutionParams solparams,
     myfile.close();
   }
   
-  ioVTK::writeVTKcollectionFooter(collection_name);
-  ioVTK::writeVTKcollectionFooter(complexcollection_name);
+  psPDE::ioVTK::writeVTKcollectionFooter(collection_name);
+  psPDE::ioVTK::writeVTKcollectionFooter(complexcollection_name);
   
   fftw_destroy_plan(forward_phi);
   fftw_destroy_plan(backward_phi);
