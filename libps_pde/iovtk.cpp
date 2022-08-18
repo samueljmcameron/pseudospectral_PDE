@@ -136,8 +136,6 @@ void ioVTK::writeVTKcollectionMiddle(const std::string collectionfname,
   if (firstslash != std::string::npos) {
     file_no_path = filename.substr(firstslash+1);
   }
-
-  std::cout << file_no_path << std::endl;
   
   auto myfile = std::fstream(collectionfname,std::ios_base::app);
   if (not myfile.is_open()) {
@@ -193,8 +191,6 @@ void ioVTK::restartVTKcollection(const std::string fname, const MPI_Comm comm)
 
   // if one process throws error, then don't want to erase data in other processes.
   MPI_Barrier(comm);
-  
-  lines.erase(lines.begin());  
 
   auto newfile = std::ofstream(fname);
   if (not newfile.is_open()) {
@@ -267,15 +263,15 @@ void ioVTK::readVTKImageData(std::vector<ft_dub*> scalar_outputs,
   
   myfile.read(memblock,1);
   stopline = memblock[0];
-  std::cout << stopline << std::endl;
 
-  std::cout << bytelength << std::endl;
+
+
   
   for (const auto &elem : scalar_outputs)    {
 
     myfile.read((char*)&bytelength,sizeof(bytelength));
     //    bytelength = *(unsigned int*) itmp;
-    std::cout << bytelength << std::endl;
+
     // since real fftw arrays aren't contiguous, need to write each row separately.
     for (int i = 0; i < Nz0; i++) {
       for (int j = 0; j < Ny0; j++) {
