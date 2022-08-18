@@ -26,7 +26,7 @@ namespace ioVTK {
   void writeVTKcollectionMiddle(const std::string,
 				const std::string, const double);
   void writeVTKcollectionFooter(const std::string);
-  void restartVTKcollection(const std::string );
+  void restartVTKcollection(const std::string, const MPI_Comm );
   
 
   //  void writeVTK_P_ImageData(std::string,

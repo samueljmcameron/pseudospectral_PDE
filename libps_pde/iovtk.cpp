@@ -72,7 +72,7 @@ void ioVTK::writeVTKImageData(std::string fname,
 	 << Ny0-1 << " " << zstart << " " << Nz0+zstart-1 << "\">" << std::endl
 	 << "<PointData Scalars=\"scalars\">" << std::endl;
 
-  for (int i = 0; i < scalar_outputs.size(); i++) {
+  for (unsigned i = 0; i < scalar_outputs.size(); i++) {
     
     int offset = i*(Nx0*Ny0*Nz0+sizeof(bytelength));
     
@@ -89,7 +89,7 @@ void ioVTK::writeVTKImageData(std::string fname,
 
 
   for (const auto &elem : scalar_outputs)    {
-    //  for (int isc = 0; isc < scalar_outputs.size(); isc++) {
+    //  for (unsigned isc = 0; isc < scalar_outputs.size(); isc++) {
     myfile.write((char*)&bytelength,sizeof(bytelength));
     // since real fftw arrays aren't contiguous, need to write each row separately.
     for (int i = 0; i < Nz0; i++) {
@@ -129,11 +129,15 @@ void ioVTK::writeVTKcollectionMiddle(const std::string collectionfname,
 				     const double time)
 {
 
-  size_t num_slashes = std::count(collectionfname.begin(), collectionfname.end(), '/');
+  //size_t num_slashes = std::count(collectionfname.begin(), collectionfname.end(), '/');
 
-  std::string prepath = "";
-  for (int i = 0; i < num_slashes; i++)
-    prepath += std::string("../");
+  size_t firstslash = filename.find_last_of("\\/");
+  std::string file_no_path = filename;
+  if (firstslash != std::string::npos) {
+    file_no_path = filename.substr(firstslash+1);
+  }
+
+  std::cout << file_no_path << std::endl;
   
   auto myfile = std::fstream(collectionfname,std::ios_base::app);
   if (not myfile.is_open()) {
@@ -141,7 +145,7 @@ void ioVTK::writeVTKcollectionMiddle(const std::string collectionfname,
   }
   
   myfile << "<DataSet timestep=\"" << time << "\" group=\"\" part=\"0\""
-	 << " file=\"" << prepath+filename << "\"/>" << std::endl;
+	 << " file=\"" << file_no_path << "\"/>" << std::endl;
 
   myfile.close();
   
@@ -161,7 +165,7 @@ void ioVTK::writeVTKcollectionFooter(const std::string fname)
   myfile.close();
 }
 
-void ioVTK::restartVTKcollection(const std::string fname)
+void ioVTK::restartVTKcollection(const std::string fname, const MPI_Comm comm)
 /* restart the collection by copying the current file (up to the collection
    end) into a new file called "restart" + oldfname. */
    
@@ -175,13 +179,20 @@ void ioVTK::restartVTKcollection(const std::string fname)
 
   std::vector<std::string> lines;
   std::string stopline = "";
+  std::getline(oldfile,stopline);
+  lines.push_back(stopline);
 
-  while (stopline != "</Collection>") {
+  while (std::getline(oldfile,stopline) && stopline != "</Collection>") {
     lines.push_back(stopline);
-    std::getline(oldfile,stopline);
   }
   oldfile.close();
 
+  if (stopline != "</Collection>") {
+    throw std::runtime_error("Invalid restart file." );
+  }
+
+  // if one process throws error, then don't want to erase data in other processes.
+  MPI_Barrier(comm);
   
   lines.erase(lines.begin());  
 

@@ -12,26 +12,14 @@
 
 #include "run.hpp"
 
-void X_1_of_t(std::vector<double> & X_1,
-	      const std::vector<double> & dFdX_1,double dt)
+void X_i_of_t(std::vector<double> & X_i,
+	      const std::vector<double> & dFdX_i,double dt)
 {
   double fric = 100.0;
-  X_1[0] += -dt*dFdX_1[0]*fric;
-  X_1[1] += -dt*dFdX_1[1]*fric;
-  X_1[2] += -dt*dFdX_1[2]*fric;
+  X_i[0] += -dt*dFdX_i[0]*fric;
+  X_i[1] += -dt*dFdX_i[1]*fric;
+  X_i[2] += -dt*dFdX_i[2]*fric;
   return;
-}
-
-
-void X_2_of_t(std::vector<double> & X_2,
-	      const std::vector<double> & dFdX_2,double dt)
-{
-  double fric = 100.0;
-  X_2[0] += -dt*dFdX_2[0]*fric;
-  X_2[1] += -dt*dFdX_2[1]*fric;
-  X_2[2] += -dt*dFdX_2[2]*fric;
-  return;
-  
 }
 
 std::string getLastLine(std::string filename);
@@ -118,10 +106,12 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
   if (gp.restart_flag) {
 
 
-    put_in_vectors(X_is,gp.thermo_file,gp.comm,gp.id);
+    if (!X_is.empty()) {
+      put_in_vectors(X_is,gp.thermo_file,gp.comm,gp.id);
+    }
     
-    psPDE::ioVTK::restartVTKcollection(collection_name);
-    psPDE::ioVTK::restartVTKcollection(complexcollection_name);
+    psPDE::ioVTK::restartVTKcollection(collection_name,gp.comm);
+    psPDE::ioVTK::restartVTKcollection(complexcollection_name,gp.comm);
     
     psPDE::ioVTK::readVTKImageData({&phi},fname_p);
     
@@ -237,8 +227,9 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
 
     t += integrator.get_dt();
 
-    X_1_of_t(X_is[0],free_energy_derivs[0],integrator.get_dt());
-    X_2_of_t(X_is[1],free_energy_derivs[1],integrator.get_dt());
+    for (unsigned index = 0; index < X_is.size(); index ++ ) {
+      X_i_of_t(X_is[index],free_energy_derivs[index],integrator.get_dt());
+    }
     
     
     fftw_execute(forward_phi);

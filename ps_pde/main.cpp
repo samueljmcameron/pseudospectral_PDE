@@ -86,10 +86,6 @@ int main(int argc, char **argv)
     return EXIT_FAILURE;
   }
 
-  if (not nucfile.is_open()) {
-    std::cerr << "Error: need to specify input file." << std::endl;
-    return EXIT_FAILURE;
-  }
 
   std::string line;
   std::vector<std::string> splitvec;
@@ -126,10 +122,16 @@ int main(int argc, char **argv)
 
   std::vector<std::vector<double>> X_is;
   
+  if (not nucfile.is_open()) {
+    std::cerr << "Warning! No nucleation file specified, so no nucleation sites will be generated."
+	      << std::endl;
+  } else {
 
-  double X_x,X_y,X_z;
-  while(nucfile >> X_x >> X_y >> X_z) {
-    X_is.push_back({X_x,X_y,X_z});
+    double X_x,X_y,X_z;
+    while(nucfile >> X_x >> X_y >> X_z) {
+      X_is.push_back({X_x,X_y,X_z});
+    }
+
   }
 
   std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();  
