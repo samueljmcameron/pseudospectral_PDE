@@ -22,7 +22,7 @@ Integrator::Integrator(MPI_Comm comm,const GridData& fourier, const int seed,
   sqrtdt = sqrt(dt);
 
   //  std::cout << (fourier.get_dz()*fourier.get_dz()*fourier.get_Nz()/2*fourier.get_Nz()/2+fourier.get_dy()*fourier.get_dy()*fourier.get_Ny()/2*fourier.get_Ny()/2+fourier.get_dx()*fourier.get_dx()*fourier.get_Nx()/2*fourier.get_Nx()/2) << std::endl;
-  std::cout << "RN : " << real_dist(gen) << std::endl;
+
   
 }
 
