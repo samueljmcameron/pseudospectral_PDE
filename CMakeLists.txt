@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 project(pseudospectral_PDE VERSION 1.0 DESCRIPTION "Model B Dynamics"
         LANGUAGES CXX)
 
+set(ENV{PKG_CONFIG_PATH} "${PKG_FFTW_MPI_LIB_DIR}/pkgconfig")
+
 
 add_compile_options(-O3 -Wall -Wextra -g -Wuninitialized)
 
@@ -22,7 +24,7 @@ if( NOT FFTW_ROOT AND DEFINED ENV{FFTWDIR} )
     set( FFTW_ROOT $ENV{FFTWDIR} )
 endif()
 
-find_library(FFTW_MPI_LIB NAMES "fftw3_mpi" PATHS ${PKG_FFTW_LIBRARY_DIRS}) # ${LIB_INSTALL_DIR} )
+find_library(FFTW_MPI_LIB NAMES "fftw3_mpi" PATHS ${PKG_FFTW_MPI_LIB_DIR}) # ${LIB_INSTALL_DIR} )
 
 if( FFTW_MPI_LIB)
     set(FFTW_MPI_LIB_FOUND TRUE)
