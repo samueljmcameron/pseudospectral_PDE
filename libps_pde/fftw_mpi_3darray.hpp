@@ -78,8 +78,6 @@ public:
   void mod(fftw_MPI_3Darray<double>&) const;
 
   void running_mod(fftw_MPI_3Darray<double>&) const;
-  void split(fftw_MPI_3Darray<double> &,
-	     fftw_MPI_3Darray<double> &) const;
 
   std::ostream& numpy_save(std::ostream & out) const;
   

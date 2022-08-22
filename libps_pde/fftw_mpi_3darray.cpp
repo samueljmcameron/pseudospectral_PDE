@@ -323,35 +323,6 @@ void fftw_MPI_3Darray<T>::running_mod(fftw_MPI_3Darray<double>& modulus) const
 
 
 
-
-
-template <>
-void fftw_MPI_3Darray<std::complex<double>>::split(fftw_MPI_3Darray<double> &real,
-						   fftw_MPI_3Darray<double> &imag) const
-{
-  
-  for (int i = 0; i < 3; i++) {
-    
-    if (axis_size(i) != real.axis_size(i)
-	|| axis_size(i) != imag.axis_size(i))
-      throw std::runtime_error("Cannot split fftw_MPI_3Darray (wrong output shape).");
-  }
-  
-
-  for (int i = 0; i < _sizeax[0]; i++) {
-    for (int j = 0; j < _sizeax[1]; j++) {
-      for (int k = 0; k < _sizeax[2]; k++) {
-	real(i,j,k) = arr[k + (i*_sizeax[1] + j ) * spacer].real();
-	imag(i,j,k) = arr[k + (i*_sizeax[1] + j ) * spacer].imag();
-      }
-    }
-  }
-  return;
-
-}
-
-
-
 template <typename T>
 fftw_MPI_3Darray<T>& fftw_MPI_3Darray<T>::operator=(fftw_MPI_3Darray<T> other)
 {
