@@ -8,23 +8,41 @@ project(pseudospectral_PDE VERSION 1.0 DESCRIPTION "Model B Dynamics"
 
 set(ENV{PKG_CONFIG_PATH} "${PKG_FFTW_MPI_LIB_DIR}/pkgconfig")
 
+#include(CheckIPOSupported)
+#check_ipo_supported(RESULT supported OUTPUT error)
 
-add_compile_options(-O3 -Wall -Wextra -g -Wuninitialized)
+#if( supported )
+#    message(STATUS "IPO / LTO enabled")
+#    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+#else()
+#	message(STATUS "IPO / LTO not supported: <${error}>")
+#endif()
 
-message("${CMAKE_MODULE_PATH}")
+add_compile_options(-flto -fuse-linker-plugin)
+add_link_options(-flto -fuse-linker-plugin)
 
 find_package(MPI REQUIRED)
 add_definitions(-DOMPI_SKIP_MPICXX)
 
 # this is from alfC answer at url https://stackoverflow.com/questions/44277114/how-to-use-fftw-library-in-cmake
 find_package(PkgConfig REQUIRED)
+
+
+#set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+
+#message(STATUS "suffix : ${CMAKE_FIND_LIBRARY_SUFFIXES}")
+
+set(PKG_CHECK_MODULES_STATIC)
+
+set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
+
 pkg_check_modules(FFTW IMPORTED_TARGET REQUIRED fftw3)
 
 if( NOT FFTW_ROOT AND DEFINED ENV{FFTWDIR} )
     set( FFTW_ROOT $ENV{FFTWDIR} )
 endif()
 
-find_library(FFTW_MPI_LIB NAMES "fftw3_mpi" PATHS ${PKG_FFTW_MPI_LIB_DIR}) # ${LIB_INSTALL_DIR} )
+find_library(FFTW_MPI_LIB NAMES "libfftw3_mpi.a" PATHS ${PKG_FFTW_MPI_LIB_DIR})
 
 if( FFTW_MPI_LIB)
     set(FFTW_MPI_LIB_FOUND TRUE)
