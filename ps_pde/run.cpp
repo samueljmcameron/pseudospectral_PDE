@@ -1,5 +1,5 @@
 #include <fstream>
-
+#include <chrono>
 
 #include "fftw_mpi_3darray.hpp"
 #include "integrator.hpp"
@@ -190,6 +190,15 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
 
 
 
+  using Clock = std::chrono::steady_clock;
+  using namespace std::literals;
+  auto constexpr chronoitvl = 1.0s/60.0;
+  using duration = std::chrono::duration<double>;
+  using time_point = std::chrono::time_point<Clock,duration>;
+
+  duration tt_integral = 0s;
+
+  duration tt_freeenergy = 0s;
 
   
   psPDE::TimeStep timestep(gp.comm,gp.mpi_size,gp.id,integrator.ft_phi.axis_size(0),
@@ -198,9 +207,11 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
   double free_energy;
   for (int it = 1+gp.startstep; it <= gp.steps+gp.startstep; it ++) {
 
+    auto current_time = Clock::now();
 
     free_energy_derivs = integrator.nonlinear(nonlinear,phi,X_is,free_energy); // compute nl(t) given phi(t)
 
+    tt_freeenergy += Clock::now() - current_time;
 
     if (gp.id == 0 && it % gp.thermo_every == 0) {
       myfile << t;
@@ -235,9 +246,11 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
     fftw_execute(forward_phi);
     fftw_execute(forward_nonlinear);
 
-    
+    current_time = Clock::now();
     timestep.update(t,integrator);
+    tt_integral = Clock::now() - current_time;
 
+    
     integrator.ft_phi.running_mod(modulus);
     running_average_count += 1;
 
@@ -284,6 +297,17 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
   fftw_destroy_plan(forward_nonlinear);
   fftw_destroy_plan(backward_nonlinear);
 
+
+  const double tot_integral = tt_integral/chronoitvl;
+  const double tot_freeenergy = tt_freeenergy/chronoitvl;
+
+  std::cout << "total integration time on process " << gp.id << " is " << tot_integral
+	    << std::endl;
+
+  std::cout << "total free energy time on process " << gp.id << " is " << tot_freeenergy
+	    << std::endl;
+
+  
 
   return;
 }
