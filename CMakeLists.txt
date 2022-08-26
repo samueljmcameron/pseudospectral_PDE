@@ -8,18 +8,16 @@ project(pseudospectral_PDE VERSION 1.0 DESCRIPTION "Model B Dynamics"
 
 set(ENV{PKG_CONFIG_PATH} "${PKG_FFTW_MPI_LIB_DIR}/pkgconfig")
 
-#include(CheckIPOSupported)
-#check_ipo_supported(RESULT supported OUTPUT error)
+include(CheckIPOSupported)
+check_ipo_supported(RESULT supported OUTPUT error)
 
-#if( supported )
-#    message(STATUS "IPO / LTO enabled")
-#    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-#else()
-#	message(STATUS "IPO / LTO not supported: <${error}>")
-#endif()
+if( supported )
+    message(STATUS "IPO / LTO enabled")
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+else()
+	message(STATUS "IPO / LTO not supported: <${error}>")
+endif()
 
-add_compile_options(-flto -fuse-linker-plugin)
-add_link_options(-flto -fuse-linker-plugin)
 
 find_package(MPI REQUIRED)
 add_definitions(-DOMPI_SKIP_MPICXX)
