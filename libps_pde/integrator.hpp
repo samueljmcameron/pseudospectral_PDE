@@ -68,7 +68,8 @@ public:
 
 
   double linker_phi(double , double , double ,double,double,double,
-		    const std::vector<std::vector<double>> & );
+		    const std::vector<std::vector<double>> & ,
+		    double, std::vector<std::vector<double>> &);
 
   void linker_derivative(std::vector<double> &,double, double ,
 			 double ,double,double, double,

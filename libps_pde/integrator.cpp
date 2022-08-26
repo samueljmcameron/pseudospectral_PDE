@@ -66,21 +66,23 @@ std::vector<std::vector<double>> Integrator::nonlinear(fftw_MPI_3Darray<double>&
   double x,y,z;
   double philink;
 
+  double integralprefactor;
+
   free_energy = 0;
   double allfree_energy;
 
   // sum will store the free energy derivative integral
-  std::vector<std::vector<double>> sum ;
+  std::vector<std::vector<double>> dFdX_is ;
   // allsum is sum after MPI_Allreduce
-  std::vector<std::vector<double>> allsum ;
+  std::vector<std::vector<double>> alldFdX_is ;
 
   for (unsigned i = 0; i < X_is.size(); i++) {
-    sum.push_back({0,0,0});
-    allsum.push_back({0,0,0});
+    dFdX_is.push_back({0,0,0});
+    alldFdX_is.push_back({0,0,0});
   }
 
 
-  std::vector<double> dlink(3);
+  //  std::vector<double> dlink(3);
   
   for (int i = 0; i < nonlinear.axis_size(0); i++) {
     z = dz*(i+  local0start) + Oz;
@@ -94,31 +96,36 @@ std::vector<std::vector<double>> Integrator::nonlinear(fftw_MPI_3Darray<double>&
       for (int k = 0; k < nonlinear.axis_size(2); k++) {
 	x = dx*k + Ox;
 
-
-	philink = linker_phi(x,y,z,Lx,Ly,Lz,X_is);
+	integralprefactor = chi_LP*((phi(i,j,k)-nucmax)
+				    *(phi(i,j,k)-nucmax)*dx*dy*dz);
+	philink = linker_phi(x,y,z,Lx,Ly,Lz,X_is,integralprefactor,dFdX_is);
 	nonlinear(i,j,k)
 	  = temp/volFH*(log(phi(i,j,k)/(1-phi(i,j,k)))+chi*(1-2*phi(i,j,k))
 			+philink*(phi(i,j,k)-nucmax));
 	//	  = 2*temp/volFH*phi(i,j,k);
 	//= -quad*phi(i,j,k)+quartic*phi(i,j,k)*phi(i,j,k)*phi(i,j,k);
 
-
-	for (unsigned index = 0; index < sum.size() ; index ++) {
-	  linker_derivative(dlink,x,y,z,Lx,Ly,Lz,X_is[index]);
+	/*
+	for (unsigned index = 0; index < dFdX_is.size() ; index ++) {
+	  
+	  //	  linker_derivative(dlink,x,y,z,Lx,Ly,Lz,X_is[index]);
+	  
 	  for (int coord = 0; coord < 3; coord++)
-	    sum[index][coord] += (dlink[coord]*(phi(i,j,k)-nucmax)
-				  *(phi(i,j,k)-nucmax)*dx*dy*dz);
+	    
+	    dFdX_is[index][coord] *= integralprefactor;
+	  
 	}
-	free_energy += philink*(phi(i,j,k)-nucmax)*(phi(i,j,k)-nucmax)*dx*dy*dz;
+	*/
+	free_energy += philink*integralprefactor;
 
       }
     }
   }
 
-  for (unsigned index = 0; index < sum.size() ; index ++) {
+  for (unsigned index = 0; index < dFdX_is.size() ; index ++) {
 
     for (int coord = 0; coord < 3; coord ++) {
-      MPI_Allreduce(&(sum[index][coord]),&(allsum[index][coord]),
+      MPI_Allreduce(&(dFdX_is[index][coord]),&(alldFdX_is[index][coord]),
 		    1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
       //      std::cout << "dfdx = " << allsum[index][coord] << std::endl;
     }
@@ -127,7 +134,7 @@ std::vector<std::vector<double>> Integrator::nonlinear(fftw_MPI_3Darray<double>&
 
   free_energy = allfree_energy;
 
-  return allsum;
+  return alldFdX_is;
 
 }
 
@@ -200,44 +207,60 @@ void Integrator::ode(std::complex<double> & y, std::complex<double> ynl,
 /* function expects that x-X_i etc are appropriately wrapped. */
 double Integrator::linker_phi(double x, double y, double z,double Lx,
 			      double Ly, double Lz,
-			      const std::vector<std::vector<double>> & X_is)
+			      const std::vector<std::vector<double>> & X_is,
+			      double integralprefactor,
+			      std::vector<std::vector<double>> & dFdXlike)
 {
 
 
   
-  double tmp = 0;
+  double sum = 0;
+  double tmp;
 
   double xtmp,ytmp,ztmp;
 
   
-  for (const auto & X_i : X_is) {
+  for (int index = 0; index < X_is.size(); index ++) {
 
     xtmp = x;
     ytmp = y;
     ztmp = z;
 
-    while (xtmp-X_i[0] > Lx/2)
+
+    while (xtmp-X_is[index][0] > Lx/2)
       xtmp -= Lx;
-    while (xtmp-X_i[0] < -Lx/2)
+    while (xtmp-X_is[index][0] < -Lx/2)
       xtmp += Lx;
     
-    while (ytmp-X_i[1] > Ly/2)
+    while (ytmp-X_is[index][1] > Ly/2)
       ytmp -= Ly;
-    while (ytmp-X_i[1] < -Ly/2)
+    while (ytmp-X_is[index][1] < -Ly/2)
       ytmp += Ly;
 
-    while (ztmp-X_i[2] > Lz/2)
+    while (ztmp-X_is[index][2] > Lz/2)
       ztmp -= Lz;
-    while (ztmp-X_i[2] < -Lz/2)
+    while (ztmp-X_is[index][2] < -Lz/2)
       ztmp += Lz;
+
+
+    xtmp = (xtmp-X_is[index][0])/nucwidth;
+    ytmp = (ytmp-X_is[index][1])/nucwidth;
+    ztmp = (ztmp-X_is[index][2])/nucwidth;
     
-    tmp += exp(-((xtmp-X_i[0])*(xtmp-X_i[0]) + (ytmp-X_i[1])*(ytmp-X_i[1])
-		 + (ztmp-X_i[2])*(ztmp-X_i[2]))/(2*nucwidth*nucwidth));
+    tmp = exp(-(xtmp*xtmp + ytmp*ytmp + ztmp*ztmp)/2.0);
+    
+    sum += tmp;
+
+
+    dFdXlike[index][0] = xtmp/nucwidth*tmp*integralprefactor;
+    dFdXlike[index][1] = ytmp/nucwidth*tmp*integralprefactor;
+    dFdXlike[index][2] = ztmp/nucwidth*tmp*integralprefactor;
+    
   }
 
 
   
-  return chi_LP*tmp;
+  return chi_LP*sum;
 }
 
 /* function expects that x-X_i etc are appropriately wrapped. */
