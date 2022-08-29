@@ -102,20 +102,7 @@ std::vector<std::vector<double>> Integrator::nonlinear(fftw_MPI_3Darray<double>&
 	nonlinear(i,j,k)
 	  = temp/volFH*(log(phi(i,j,k)/(1-phi(i,j,k)))+chi*(1-2*phi(i,j,k))
 			+philink*(phi(i,j,k)-nucmax));
-	//	  = 2*temp/volFH*phi(i,j,k);
-	//= -quad*phi(i,j,k)+quartic*phi(i,j,k)*phi(i,j,k)*phi(i,j,k);
 
-	/*
-	for (unsigned index = 0; index < dFdX_is.size() ; index ++) {
-	  
-	  //	  linker_derivative(dlink,x,y,z,Lx,Ly,Lz,X_is[index]);
-	  
-	  for (int coord = 0; coord < 3; coord++)
-	    
-	    dFdX_is[index][coord] *= integralprefactor;
-	  
-	}
-	*/
 	free_energy += philink*integralprefactor;
 
       }
@@ -252,9 +239,9 @@ double Integrator::linker_phi(double x, double y, double z,double Lx,
     sum += tmp;
 
 
-    dFdXlike[index][0] = xtmp/nucwidth*tmp*integralprefactor;
-    dFdXlike[index][1] = ytmp/nucwidth*tmp*integralprefactor;
-    dFdXlike[index][2] = ztmp/nucwidth*tmp*integralprefactor;
+    dFdXlike[index][0] += xtmp/nucwidth*tmp*integralprefactor;
+    dFdXlike[index][1] += ytmp/nucwidth*tmp*integralprefactor;
+    dFdXlike[index][2] += ztmp/nucwidth*tmp*integralprefactor;
     
   }
 
