@@ -101,7 +101,7 @@ std::vector<std::vector<double>> Integrator::nonlinear(fftw_MPI_3Darray<double>&
 	philink = linker_phi(x,y,z,Lx,Ly,Lz,X_is,integralprefactor,dFdX_is);
 	nonlinear(i,j,k)
 	  = temp/volFH*(log(phi(i,j,k)/(1-phi(i,j,k)))+chi*(1-2*phi(i,j,k))
-			+philink*(phi(i,j,k)-nucmax));
+			+2*philink*(phi(i,j,k)-nucmax));
 
 	free_energy += philink*integralprefactor;
 
