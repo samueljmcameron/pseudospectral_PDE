@@ -17,8 +17,8 @@ Integrator::Integrator(MPI_Comm comm,const GridData& fourier, const int seed,
   gen.seed(seed);
   double tmp = fourier.get_dx()*fourier.get_dy()*fourier.get_dz()/(2*M_PI*2*M_PI*2*M_PI);
   local0start = ft_phi.get_local0start();
-  complexprefactor = sqrt(12*temp*mobility*tmp);
-  realprefactor = sqrt(24*temp*mobility*tmp);
+  complexprefactor = sqrt(12*temp*mobility/volFH*tmp);
+  realprefactor = sqrt(24*temp*mobility/volFH*tmp);
   sqrtdt = sqrt(dt);
 
   //  std::cout << (fourier.get_dz()*fourier.get_dz()*fourier.get_Nz()/2*fourier.get_Nz()/2+fourier.get_dy()*fourier.get_dy()*fourier.get_Ny()/2*fourier.get_Ny()/2+fourier.get_dx()*fourier.get_dx()*fourier.get_Nx()/2*fourier.get_Nx()/2) << std::endl;
@@ -183,7 +183,7 @@ void Integrator::integrate_real(int i, int j, int k)
 void Integrator::ode(std::complex<double> & y, std::complex<double> ynl,
 		   std::complex<double> rnd, double q2)
 {
-  y = (y-mobility*q2*dt*(ynl+temp/volFH*gamma*q2*y))*normalization*normalization +  rnd;
+  y = (y-mobility/volFH*q2*dt*(ynl+temp/volFH*gamma*q2*y))*normalization*normalization +  rnd;
   return;
 }
 
@@ -296,7 +296,7 @@ void Integrator::linker_derivative(std::vector<double> & out,
 void Integrator::ode(std::complex<double> & y, std::complex<double> ynl,
 		   std::complex<double> rnd, double q2)
 {
-  y = (((y-mobility*q2*ynl*dt)*normalization*normalization + rnd )/(1+mobility*gamma*q2*q2*dt));
+  y = (((y-mobility/volFH*q2*ynl*dt)*normalization*normalization + rnd )/(1+mobility/volFH*gamma*q2*q2*dt));
   return;
 }
 */
