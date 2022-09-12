@@ -15,7 +15,8 @@ Integrator::Integrator(MPI_Comm comm,const GridData& fourier, const int seed,
 {
 
   gen.seed(seed);
-  double tmp = fourier.get_dx()*fourier.get_dy()*fourier.get_dz()/(2*M_PI*2*M_PI*2*M_PI);
+  double tmp = fourier.get_dx()*fourier.get_dy()*fourier.get_dz()/(2*M_PI*2*M_PI*2*M_PI
+								   *2*M_PI*2*M_PI*2*M_PI);
   local0start = ft_phi.get_local0start();
   complexprefactor = sqrt(12*temp*mobility/volFH*tmp);
   realprefactor = sqrt(24*temp*mobility/volFH*tmp);
