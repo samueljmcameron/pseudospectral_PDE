@@ -254,6 +254,20 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
     integrator.ft_phi.running_mod(modulus);
     running_average_count += 1;
 
+
+    if (std::isnan(phi(0,0,0))) {
+
+      if (gp.id == 0) {
+	myfile.close();
+      }
+      
+      psPDE::ioVTK::writeVTKcollectionFooter(collection_name);
+      psPDE::ioVTK::writeVTKcollectionFooter(complexcollection_name);
+      throw std::runtime_error("Solution concentration diverged.");
+      
+    }
+
+
     if (it % gp.dump_every == 0) {
       std::cout << "id " << gp.id << " saving at t = " << t << std::endl;
       fname_p = prefix + std::string("_") +  std::to_string(it) +  std::string(".vti");
