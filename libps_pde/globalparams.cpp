@@ -11,17 +11,11 @@ GlobalParams::GlobalParams(const MPI_Comm comm, const int id, const int mpi_size
 			   std::map<std::string,std::string> const& varMap,
 			   std::string& lastline) :
 
-  default_steps(100),default_grid(64),default_length(100.0),default_dt(1e-4),
-  default_dump_every(100),default_thermo_every(100),default_dump_file("dump"),
-  default_thermo_file("thermo"),default_volFrac(0.3),default_variance(0.0),
-  default_seed(129480),restart_flag(false),startstep(0),starttime(0.0),
-  steps(default_steps),seed(default_seed),dump_every(default_dump_every),
-  thermo_every(default_thermo_every),dt(default_dt),volFrac(default_volFrac),
-  variance(default_variance),dump_file(default_dump_file),
-  thermo_file(default_thermo_file),comm(comm), id(id),mpi_size(mpi_size),
-  realspace(default_grid,default_grid,default_grid,
-	    default_length,default_length,default_length),
-  fourier(realspace)
+  restart_flag(false),startstep(0),starttime(0.0),
+  steps(100),seed(129480),dump_every(100),thermo_every(100),
+  dt(1e-4),volFrac(0.3),variance(0.0),dump_file("dump"),
+  thermo_file("thermo"),comm(comm), id(id),mpi_size(mpi_size),
+  realspace(64,64,64,100.0,100.0,100.0),fourier(realspace)
 {
 
 
@@ -51,9 +45,8 @@ GlobalParams::GlobalParams(const MPI_Comm comm, const int id, const int mpi_size
       
       splitvec = input::split_line(line);
       
-      // check if keyword is global parameter, assume if not then
-      // no longer defining global params
-      if (pset.find(splitvec[0]) == pset.end()) {
+      // if build_solution, then global variable definitions are done
+      if (splitvec[0] == "build_solution") {
 	break;
       }
       
@@ -74,6 +67,8 @@ GlobalParams::GlobalParams(const MPI_Comm comm, const int id, const int mpi_size
 	  thermo_file = splitvec[1];
 	} else if (splitvec[0] == "seed") {
 	  input::isInt(splitvec[1],seed,splitvec[0]);
+	} else {
+	  throw std::runtime_error("Error: invalid input file.");
 	}
 
 
@@ -87,6 +82,8 @@ GlobalParams::GlobalParams(const MPI_Comm comm, const int id, const int mpi_size
 	  input::isInt(splitvec[1],startstep,splitvec[0]);
 	  input::isDouble(splitvec[2],starttime,splitvec[0]);
 	  restart_flag = true;
+	} else {
+	  throw std::runtime_error("Error: invalid input file.");
 	}
 	
 	
@@ -104,9 +101,8 @@ GlobalParams::GlobalParams(const MPI_Comm comm, const int id, const int mpi_size
 	  input::isDouble(splitvec[1],Lx,splitvec[0]);
 	  input::isDouble(splitvec[2],Ly,splitvec[0]);
 	  input::isDouble(splitvec[3],Lz,splitvec[0]);
-
-
-	  
+	} else {
+	  throw std::runtime_error("Error: invalid input file.");
 	}
       } else {
 	throw std::runtime_error("Error: invalid input file.");
@@ -139,34 +135,33 @@ void GlobalParams::printall()
   std::cout << std::endl << std::endl;
   std::cout << "Global parameters in this simulation: " << std::endl << std::endl;
 
-  std::cout << "steps: " << steps << ". (Default is " << default_steps << ".)"
+  std::cout << "steps: " << steps << "."
 	    << std::endl;
-  std::cout << "volFrac: " << volFrac << ". (Default is " << default_volFrac << ".)"
+  std::cout << "volFrac: " << volFrac << "."
 	    << std::endl;
-  std::cout << "variance: " << variance << ". (Default is " << default_variance << ".)"
+  std::cout << "variance: " << variance << "."
 	    << std::endl;
-  std::cout << "dt: " << dt << ". (Default is " << default_dt << ".)"
+  std::cout << "dt: " << dt << "."
 	    << std::endl;
-  std::cout << "dump_every: " << dump_every << ". (Default is " << default_dump_every
-	    << ".)"   << std::endl;
-  std::cout << "dump_file: " << dump_file << ". (Default is " << default_dump_file << ".)"
+  std::cout << "dump_every: " << dump_every << "."
 	    << std::endl;
-
-  std::cout << "thermo_every: " << thermo_every << ". (Default is " << default_thermo_every
-	    << ".)"   << std::endl;
-  std::cout << "thermo_file: " << thermo_file << ". (Default is " << default_thermo_file << ".)"
+  std::cout << "dump_file: " << dump_file << "."
 	    << std::endl;
 
-  std::cout << "seed: " << seed << ". (Default is " << default_seed << ".)"
+  std::cout << "thermo_every: " << thermo_every << "."
 	    << std::endl;
-  
+  std::cout << "thermo_file: " << thermo_file << "."
+	    << std::endl;
+
+  std::cout << "seed: " << seed << "."
+	    << std::endl;
   
   std::cout << "boxgrid: (" << realspace.get_Nx() << "," << realspace.get_Ny() << ","
-	    << realspace.get_Nz() << "). (Default is " << default_grid << ".)"
+	    << realspace.get_Nz() << ")."
 	    << std::endl;
   std::cout << "boxdims: (" << realspace.get_Lx() << ","
 	    << realspace.get_Ly() << ","  << realspace.get_Lz()
-	    << "). (Default is " << default_length << ".)"
+	    << ")."
 	    << std::endl;
 
   std::cout << "boxorigin: (" << realspace.get_Ox() << ","
@@ -174,18 +169,18 @@ void GlobalParams::printall()
 	    << "). "  << std::endl;
 
   std::cout << "fouriergrid (just to confirm): (" << fourier.get_Nx() << "," << fourier.get_Ny()
-	    << "," << fourier.get_Nz() << "). (Default is " << default_grid << ".)"
+	    << "," << fourier.get_Nz() << ")."
 	    << std::endl;
   std::cout << "fourierdims (just to confirm): (" << fourier.get_Lx() << ","
 	    << fourier.get_Ly() << ","  << fourier.get_Lz()
-	    << "). (Default is " << default_length << ".)"
+	    << ")."
 	    << std::endl;
 
   std::cout << "fourierorigin: (" << fourier.get_Ox() << ","
 	    << fourier.get_Oy() << ","  << fourier.get_Oz()
 	    << "). "  << std::endl;
 
-  
-  std::cout << "Restart: " << restart_flag << std::endl;
+
+  std::cout << "Restart: " << (restart_flag ? "yes" : "no" ) << std::endl;
   std::cout << "startstep: " << startstep << std::endl << std::endl;
 }
