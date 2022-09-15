@@ -9,6 +9,7 @@
 #include "griddata.hpp"
 #include "iovtk.hpp"
 #include "timestep.hpp"
+#include "input.hpp"
 
 #include "run.hpp"
 
@@ -21,11 +22,6 @@ void X_i_of_t(std::vector<double> & X_i,
   X_i[2] += -dt*dFdX_i[2]*fric;
   return;
 }
-
-std::string getLastLine(std::string filename);
-
-void put_in_vectors(std::vector<std::vector<double>> & X_is,
-		    std::string filename, MPI_Comm comm,int mpi_id);
 
 
 void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
@@ -72,12 +68,9 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
 						FFTW_MPI_TRANSPOSED_IN);
   
 
-  integrator.initialize(phi,gp.volFrac,gp.variance);
-
   
   std::vector<std::vector<double>> free_energy_derivs;
 
-  //  std::vector<std::vector<double>> free_energy_derivative;
   
   double t = gp.starttime;
 
@@ -106,9 +99,12 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
   if (gp.restart_flag) {
 
 
-    if (!X_is.empty()) {
-      put_in_vectors(X_is,gp.thermo_file,gp.comm,gp.id);
-    }
+    if (X_is.size() > 0) 
+      throw std::runtime_error("Cannot specify additional nucleation sites when "
+			       + std::string("restarting a file. Use read instead."));
+
+    psPDE::input::put_in_vectors(X_is,gp.thermo_file,gp.comm,gp.id,gp.starttime);
+
     
     psPDE::ioVTK::restartVTKcollection(collection_name,gp.comm);
     psPDE::ioVTK::restartVTKcollection(complexcollection_name,gp.comm);
@@ -123,14 +119,6 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
       }
     }
 
-    std::cout << "restarting!" << std::endl;
-
-    // insert file read here!
-
-
-
-    
-
     if (gp.id == 0) {
       myfile.open(gp.thermo_file,std::ios::app);
       
@@ -140,6 +128,20 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
 
     psPDE::ioVTK::writeVTKcollectionHeader(collection_name);
     psPDE::ioVTK::writeVTKcollectionHeader(complexcollection_name);
+
+
+    if (gp.read_flag) {
+      psPDE::ioVTK::readVTKImageData({&phi},gp.read_dump_file);
+      if (gp.all_nucs_flag) {
+	psPDE::input::put_in_vectors(X_is,gp.read_thermo_file,gp.comm,gp.id,
+				     gp.starttime);
+      } else {
+	psPDE::input::put_in_vectors(X_is,gp.nucs_to_keep,gp.read_thermo_file,gp.comm,gp.id,
+				     gp.starttime);
+      }
+    } else { 
+      integrator.initialize(phi,gp.volFrac,gp.variance);
+    }
 
     fftw_execute(forward_phi);
     integrator.ft_phi.mod(modulus);
@@ -324,85 +326,4 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
   
 
   return;
-}
-
-
-
-std::string getLastLine(std::string filename)
-{
-
-  std::ifstream myfile (filename);
-  std::string lastline;
-
-  if (myfile) {
-
-    // assumes that last line is just a newline char, hence the -2 below (vs -1)
-    myfile.seekg(-2,myfile.end);
-
-    char ch;
-
-    myfile.get(ch);
-
-    while (ch != '\n' && myfile.tellg() >1) {
-    
-      myfile.seekg(-2,myfile.cur);
-      myfile.get(ch);
-    }
-
-
-
-
-    std::getline(myfile,lastline);
-
-  } else {
-    throw std::runtime_error("File " + std::string(filename) + " does not exist");
-  }
-
-  myfile.close();
-  return lastline;
-}
-
-
-void put_in_vectors(std::vector<std::vector<double>> & X_is,
-		    std::string filename, MPI_Comm comm,int mpi_id)
-{
-
-  std::string finalline;
-  int signal = 0;
-  if (mpi_id == 0) {
-
-    try {
-      finalline = getLastLine(filename);
-    }
-    catch (const std::runtime_error & error) {
-      signal = -1;
-    }
-
-  }
-
-  MPI_Bcast(&signal,1,MPI_INT,0,comm);
-
-  if (signal == -1) {
-    throw std::runtime_error("File " + std::string(filename) + " does not exist");    
-  }
-
-  std::istringstream iss(finalline);
-  
-  std::string subs;
-  if (mpi_id == 0) {
-    iss >> subs;
-  }
-
-  for (auto &cmp : X_is) {
-    for (int i = 0; i < 3; i++) {
-      if (mpi_id == 0) {
-	iss >> cmp.at(i);
-      }
-
-      MPI_Bcast(&cmp.at(i),1,MPI_DOUBLE,0,comm);
-    }
-  }
-
-  return;
-  
 }

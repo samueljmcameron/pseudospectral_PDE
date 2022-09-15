@@ -250,10 +250,11 @@ void ioVTK::readVTKImageData(std::vector<ft_dub*> scalar_outputs,
 	 || elem->axis_size(2) != Nx0)
       throw std::runtime_error("All scalars must be on same grid.");
   
-  
+
   auto myfile = std::fstream(fname, std::ios::in | std::ios::binary);
 
-  
+  if (not myfile.is_open()) 
+    throw std::runtime_error("Image data reading file doesn't exist."); 
 
   while (stopline != "<AppendedData encoding=\"raw\">") {
     std::getline(myfile,stopline);
