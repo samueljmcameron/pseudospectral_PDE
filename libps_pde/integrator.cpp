@@ -1,5 +1,5 @@
 #include "integrator.hpp"
-
+#include <cmath>
 
 using namespace psPDE;
 
@@ -9,20 +9,21 @@ Integrator::Integrator(MPI_Comm comm,const GridData& fourier, const int seed,
   seed(seed),mobility(solparams.mobility),gamma(solparams.gamma),
   temp(solparams.temp),chi(solparams.chi), volFH(solparams.volFH),
   chi_LP(solparams.chi_LP),nucmax(solparams.nucmax),nucwidth(solparams.nucwidth),
-  normalization(sqrt(1.0/(fourier.get_Nx()*fourier.get_Ny()*fourier.get_Nz()))),
+  normalization(1.0/(fourier.get_Nx()*fourier.get_Ny()*fourier.get_Nz())),
   dt(dt),real_dist(-0.5,0.5),ft_phi(comm,"ft_phi",fourier),
   ft_nonlinear(comm,"ft_nl",fourier)
 {
 
   gen.seed(seed);
-  double tmp = fourier.get_dx()*fourier.get_dy()*fourier.get_dz()/(2*M_PI*2*M_PI*2*M_PI
-								   *2*M_PI*2*M_PI*2*M_PI);
-  local0start = ft_phi.get_local0start();
-  complexprefactor = sqrt(12*temp*mobility/volFH*tmp);
-  realprefactor = sqrt(24*temp*mobility/volFH*tmp);
-  sqrtdt = sqrt(dt);
+  double invLcubed = fourier.get_dx()*fourier.get_dy()*fourier.get_dz()/(2*M_PI
+									 *2*M_PI
+									 *2*M_PI);
 
-  //  std::cout << (fourier.get_dz()*fourier.get_dz()*fourier.get_Nz()/2*fourier.get_Nz()/2+fourier.get_dy()*fourier.get_dy()*fourier.get_Ny()/2*fourier.get_Ny()/2+fourier.get_dx()*fourier.get_dx()*fourier.get_Nx()/2*fourier.get_Nx()/2) << std::endl;
+  local0start = ft_phi.get_local0start();
+  complexprefactor = sqrt(12*temp*mobility*invLcubed);
+  realprefactor = sqrt(24*temp*mobility*invLcubed);
+
+  sqrtdt = sqrt(dt);
 
   
 }
@@ -100,10 +101,10 @@ std::vector<std::vector<double>> Integrator::nonlinear(fftw_MPI_3Darray<double>&
 	integralprefactor = chi_LP*((phi(i,j,k)-nucmax)
 				    *(phi(i,j,k)-nucmax)*dx*dy*dz);
 	philink = linker_phi(x,y,z,Lx,Ly,Lz,X_is,integralprefactor,dFdX_is);
-	nonlinear(i,j,k)
+	nonlinear(i,j,k) 
 	  = temp/volFH*(log(phi(i,j,k)/(1-phi(i,j,k)))+chi*(1-2*phi(i,j,k))
 			+2*philink*(phi(i,j,k)-nucmax));
-
+	  //= temp/volFH*chi*phi(i,j,k);
 	free_energy += philink*integralprefactor;
 
       }
@@ -184,7 +185,11 @@ void Integrator::integrate_real(int i, int j, int k)
 void Integrator::ode(std::complex<double> & y, std::complex<double> ynl,
 		   std::complex<double> rnd, double q2)
 {
-  y = (y-mobility/volFH*q2*dt*(ynl+temp/volFH*gamma*q2*y))*normalization*normalization +  rnd;
+  y = (y-mobility*q2*dt*(ynl+temp/volFH*gamma*q2*y))*normalization +  rnd;
+  //  y = rnd;
+  //y = (((y-mobility*q2*ynl*dt)*normalization + rnd )/(1+mobility*temp/volFH*gamma*q2*q2*dt));
+
+
   return;
 }
 

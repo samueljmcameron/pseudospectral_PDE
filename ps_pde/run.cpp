@@ -265,7 +265,8 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
       
       psPDE::ioVTK::writeVTKcollectionFooter(collection_name);
       psPDE::ioVTK::writeVTKcollectionFooter(complexcollection_name);
-      throw std::runtime_error("Solution concentration diverged.");
+      throw std::runtime_error("Solution concentration diverged at t = " +
+			       std::to_string(t));
       
     }
 

@@ -38,7 +38,6 @@ private:
   std::mt19937 gen;
 
   std::uniform_real_distribution<double> real_dist;
-
   
   void ode(std::complex<double> &, std::complex<double>,
 	   std::complex<double>, double);

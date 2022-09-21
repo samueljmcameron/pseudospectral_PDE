@@ -2,16 +2,17 @@
 
 boxgrid      64 64 64
 boxdims      100.0 100.0 100.0
-steps        1000
+steps        200000
 dt	     1e-4
-dump_every   100
-volFrac	     0.2 0.0
-seed         129480
-dump_file    vtkfiles/initializer
+dump_every   1000
+volFrac	     0.2 0.03
+seed         8915820
+dump_file    vtkfiles/nucd
 thermo_every 10
-thermo_file  thermo/initializer_free_energy.txt
+thermo_file  thermo/nucd_free_energy.txt
+
 
 
 # set polymer parameters
 
-build_solution mobility 1.0 volFH 3.0 gamma 1.0 chi 3.0 temp 4.114 chi_LP 1.0 chi_LL 1.0 nucmax 0.9 nucwidth 1.0
+build_solution mobility 0.01 volFH 0.01 gamma 10.0 chi 3.0 temp 1.0 chi_LP 1.0 chi_LL 1.0 nucmax 0.9 nucwidth 1.0
