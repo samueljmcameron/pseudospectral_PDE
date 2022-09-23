@@ -121,15 +121,21 @@ int main(int argc, char **argv)
   }
 
   std::vector<std::vector<double>> X_is;
+  std::vector<double> radii;
+  std::vector<double> viscosities;
   
-  if (not nucfile.is_open()) {
+  if (not nucfile.is_open() && not gp.read_flag && not gp.restart_flag) {
     std::cerr << "Warning! No nucleation file specified, so no nucleation sites will be generated."
 	      << std::endl;
   } else {
 
     double X_x,X_y,X_z;
-    while(nucfile >> X_x >> X_y >> X_z) {
+    double viscosity,radius;
+    while(nucfile >> X_x >> X_y >> X_z >> viscosity >> radius) {
       X_is.push_back({X_x,X_y,X_z});
+      viscosities.push_back(viscosity);
+      radii.push_back(radius);
+      
     }
 
   }
@@ -138,7 +144,7 @@ int main(int argc, char **argv)
 
   if (simulation_type == "run") {
     std::cout << "Running simulation of solution." << std::endl;
-    run(gp,solparams,X_is);
+    run(gp,solparams,X_is,radii,viscosities);
   }
 
   std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();

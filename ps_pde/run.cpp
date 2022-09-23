@@ -14,9 +14,10 @@
 #include "run.hpp"
 
 void X_i_of_t(std::vector<double> & X_i,
-	      const std::vector<double> & dFdX_i,double dt)
+	      const std::vector<double> & dFdX_i,double dt,
+	      double radius, double viscosity)
 {
-  double fric = 100.0;
+  double fric = 1./(6*M_PI*viscosity*radius);
   X_i[0] += -dt*dFdX_i[0]*fric;
   X_i[1] += -dt*dFdX_i[1]*fric;
   X_i[2] += -dt*dFdX_i[2]*fric;
@@ -25,7 +26,8 @@ void X_i_of_t(std::vector<double> & X_i,
 
 
 void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
-	 std::vector<std::vector<double>> &X_is) {
+	 std::vector<std::vector<double>> &X_is,
+	 std::vector<double> & radii, std::vector<double> & viscosities) {
 
   
   psPDE::fftw_MPI_3Darray<double> phi(gp.comm,"concentration",gp.realspace);
@@ -241,7 +243,8 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
     t += integrator.get_dt();
 
     for (unsigned index = 0; index < X_is.size(); index ++ ) {
-      X_i_of_t(X_is[index],free_energy_derivs[index],integrator.get_dt());
+      X_i_of_t(X_is[index],free_energy_derivs[index],integrator.get_dt(),radii[index],
+	       viscosities[index]);
     }
     
     
