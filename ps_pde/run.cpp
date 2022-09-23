@@ -105,7 +105,13 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
       throw std::runtime_error("Cannot specify additional nucleation sites when "
 			       + std::string("restarting a file. Use read instead."));
 
-    psPDE::input::put_in_vectors(X_is,gp.thermo_file,gp.comm,gp.id,gp.starttime);
+
+    psPDE::input::read_in_nuclei_properties(radii,viscosities,gp.nucs_to_keep,
+					    true,gp.thermo_file,
+					    gp.comm,gp.id);
+    
+    psPDE::input::put_in_vectors(X_is,gp.nucs_to_keep,gp.thermo_file,gp.comm,
+				 gp.id,gp.starttime);
 
     
     psPDE::ioVTK::restartVTKcollection(collection_name,gp.comm);
@@ -134,13 +140,15 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
 
     if (gp.read_flag) {
       psPDE::ioVTK::readVTKImageData({&phi},gp.read_dump_file);
-      if (gp.all_nucs_flag) {
-	psPDE::input::put_in_vectors(X_is,gp.read_thermo_file,gp.comm,gp.id,
-				     gp.starttime);
-      } else {
-	psPDE::input::put_in_vectors(X_is,gp.nucs_to_keep,gp.read_thermo_file,gp.comm,gp.id,
-				     gp.starttime);
-      }
+      
+      psPDE::input::read_in_nuclei_properties(radii,viscosities,gp.nucs_to_keep,
+					      gp.all_nucs_flag,gp.read_thermo_file,
+					      gp.comm,gp.id);
+      
+      psPDE::input::put_in_vectors(X_is,gp.nucs_to_keep,gp.read_thermo_file,gp.comm,
+				   gp.id,gp.starttime);
+
+	
     } else { 
       integrator.initialize(phi,gp.volFrac,gp.variance);
     }
@@ -175,6 +183,14 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
     
     if (gp.id == 0) {
       myfile.open(gp.thermo_file);
+
+      myfile << "# nucnum \t radius \t viscosity " << std::endl;
+      for (int index =  0; index < viscosities.size(); index++ ) {
+	myfile << "# " << index << " \t " << radii.at(index) << " \t "
+	       << viscosities.at(index) << std::endl;
+      }
+      
+      
       myfile << "# t ";
       for (unsigned index = 0; index < X_is.size() ; index ++) {
 	myfile << "\t (X_" << index << ")_x " << "(X_" << index << ")_y"

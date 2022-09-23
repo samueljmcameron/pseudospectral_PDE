@@ -2,9 +2,9 @@
 
 boxgrid      64 64 64
 boxdims      100.0 100.0 100.0
-steps        1000
-dt	     1e-4
-dump_every   100
+steps        40
+dt	     1e-3
+dump_every   10
 volFrac	     0.2 0.0
 seed         72129
 dump_file    vtkfiles/read
@@ -14,6 +14,6 @@ thermo_file  thermo/read_free_energy.txt
 
 # set polymer parameters
 
-read 0.1 vtkfiles/initializer_p%_1000.vti thermo/initializer_free_energy.txt all
+read 0.02 vtkfiles/nucd_p%_20.vti thermo/nucd_free_energy.txt 1 0
 
-build_solution mobility 1.0 volFH 3.0 gamma 1.0 chi 3.0 temp 4.114 chi_LP 1.0 chi_LL 1.0 nucmax 0.9 nucwidth 1.0
+build_solution mobility 0.01 volFH 0.01 gamma 10.0 chi 3.0 temp 1.0 chi_LP 1.0 chi_LL 1.0 nucmax 0.9 nucwidth 1.0

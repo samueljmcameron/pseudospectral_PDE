@@ -118,33 +118,87 @@ namespace input {
   }
 
 
-  // read in nucleation sites from another file
+  // read in radii, viscosities, and also add to the nucs_to_keep vector if the
+  // all_nucs_flag = true
+  void read_in_nuclei_properties(std::vector<double> &radii,
+				 std::vector<double> &viscosities,
+				 std::vector<int> &nucs_to_keep,
+				 bool all_nucs_flag,
+				 std::string filename, MPI_Comm comm,
+				 int mpi_id)
+  {
+
+    int signal = 0;
+
+    int original_vecprop_size = radii.size();
+
+    
+    if (mpi_id == 0) {
+
+      try {
+	getNucleiProperties(filename,radii,viscosities,nucs_to_keep,all_nucs_flag);
+      }
+      catch (const std::runtime_error & error) {
+	signal = -1;
+      }
+    }
+
+    MPI_Bcast(&signal,1,MPI_INT,0,comm);
+    
+    if (signal == -1) {
+      throw std::runtime_error("File " + std::string(filename) + " does not exist");    
+    }
+
+    
+    int n2ksize;
+    if (mpi_id == 0) {
+      n2ksize = nucs_to_keep.size();
+    }
+    MPI_Bcast(&n2ksize,1,MPI_INT,0,comm);
+
+    
+    radii.resize(original_vecprop_size + n2ksize);
+    viscosities.resize(original_vecprop_size + n2ksize);
+    nucs_to_keep.resize(n2ksize);
+
+    
+    for (int index = 0; index < n2ksize; index ++ ) {
+
+      if (all_nucs_flag)
+	MPI_Bcast(&nucs_to_keep.at(index),1,MPI_INT,0,comm);
+      
+      MPI_Bcast(&radii.at(index+original_vecprop_size),1,MPI_DOUBLE,0,comm);
+      MPI_Bcast(&viscosities.at(index+original_vecprop_size),1,MPI_DOUBLE,0,comm);
+    }
+
+    return;
+  }
+  
+  // read in nucleation sites from file
   void put_in_vectors(std::vector<std::vector<double>> & X_is,
 		      const std::vector<int> & nucs_to_keep,
-		      std::string filename, MPI_Comm comm,int mpi_id,
-		      double starttime)
+		      std::string filename,
+		      MPI_Comm comm,int mpi_id, double starttime)
   {
     
     std::string finalline;
     
-    // first check if file exists
     int signal = 0;
     if (mpi_id == 0) {
-      
       try {
 	finalline = getMatchingLine(filename,starttime);
       }
       catch (const std::runtime_error & error) {
 	signal = -1;
       }
-      
+
+
     }
-    
     MPI_Bcast(&signal,1,MPI_INT,0,comm);
     
     if (signal == -1) {
       throw std::runtime_error("File " + std::string(filename) + " does not exist");    
-    }
+    }    
     
     std::vector<std::string> splitvec = split_line(finalline);
     
@@ -192,71 +246,76 @@ namespace input {
     
   }
 
-  // read in nucleation sites from another file (and keep all of them)
-  void put_in_vectors(std::vector<std::vector<double>> & X_is,
-		      std::string filename, MPI_Comm comm,int mpi_id,
-		      double starttime)
+
+  // run this from a single processor only!
+  void getNucleiProperties(std::string filename,std::vector<double> & radii,
+			   std::vector<double> & viscosities,
+			   std::vector<int> & nucs_to_keep,
+			   bool all_nucs_flag)
   {
+
+    std::ifstream myfile (filename);
+    std::string line;
+    std::vector<std::string> split;
+    std::string::size_type sz;
+
     
-    std::string finalline;
     
-    // first check if file exists
-    int signal = 0;
-    if (mpi_id == 0) {
+    if (myfile) {
+
+      std::getline(myfile,line);
+      // expect first line to be "# nucnum radius viscosity"
+      split = split_line(line);
+      if (split.size() != 4) std::runtime_error("Incorrect format of file " + filename);
+
+      int nucnum;
+      double rad,visc;
+
+      // read in radii and viscosities
       
-      try {
-	finalline = getMatchingLine(filename,starttime);
-      }
-      catch (const std::runtime_error & error) {
-	signal = -1;
-      }
-      
-    }
-    
-    MPI_Bcast(&signal,1,MPI_INT,0,comm);
-    
-    if (signal == -1) {
-      throw std::runtime_error("File " + std::string(filename) + " does not exist");    
-    }
+      while(std::getline(myfile,line)) {
 
+	split = split_line(line);
 
-    
-    // a thermo file with N nucleation sites in it should have 2*N*3+2 entries per line,
-    //  (the + 2 is due to time and free energy, the *3 is due to three components per
-    //  vector, and the *2 is due to each nucleation site also having a free energy
-    //  derivative vector).
-    
-    int maxsites;
-    std::vector<std::string> splitvec;
-    if (mpi_id == 0) {
-      splitvec = split_line(finalline);
-      maxsites = (splitvec.size()-2)/6;
-    }
-    MPI_Bcast(&maxsites,1,MPI_INT,0,comm);
-    
-    double Xx,Xy,Xz;
-
-    for (int nuc = 0; nuc < maxsites; nuc ++) {
-      
-
-      if (mpi_id == 0) {
+	// expect relevant lines to be "# {nucnum} {radius} {viscosity}"
 	
-	isDouble(splitvec.at(1+nuc*3),Xx,"");
-	isDouble(splitvec.at(1+nuc*3+1),Xy,"");
-	isDouble(splitvec.at(1+nuc*3+2),Xz,"");
+	if (split.size() != 4) break;
+	
+	// store only those nuclei which are meant to be kept.
+	
+	nucnum = std::stoi(split.at(1),&sz);
+
+	if (all_nucs_flag) {
+	  nucs_to_keep.push_back(nucnum);
+	  rad = std::stod(split.at(2), &sz);
+	  visc = std::stod(split.at(3), &sz);
+	  radii.push_back(rad);
+	  viscosities.push_back(visc);
+	} else {	  
+	  for (auto nuc : nucs_to_keep) {
+	    if (nucnum == nuc) {
+	      rad = std::stod(split.at(2), &sz);
+	      visc = std::stod(split.at(3), &sz);
+	      radii.push_back(rad);
+	      viscosities.push_back(visc);
+	    }
+	  }
+
+	}
 
       }
       
-      MPI_Bcast(&Xx,1,MPI_DOUBLE,0,comm);
-      MPI_Bcast(&Xy,1,MPI_DOUBLE,0,comm);
-      MPI_Bcast(&Xz,1,MPI_DOUBLE,0,comm);
-      
-      X_is.push_back({Xx,Xy,Xz});
+    } else {
+      throw std::runtime_error("File " + std::string(filename) + " does not exist");
     }
-    
+
+
+
     return;
-    
   }
+
+  
+  
   // return the line whose first entry is closest (either equal to or less than) starttime
   std::string getMatchingLine(std::string filename,double starttime)
   {

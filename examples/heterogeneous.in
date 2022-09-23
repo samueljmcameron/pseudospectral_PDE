@@ -2,9 +2,9 @@
 
 boxgrid      64 64 64
 boxdims      100.0 100.0 100.0
-steps        200000
-dt	     1e-4
-dump_every   1000
+steps        20
+dt	     1e-3
+dump_every   10
 volFrac	     0.2 0.03
 seed         8915820
 dump_file    vtkfiles/nucd

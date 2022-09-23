@@ -131,11 +131,10 @@ int main(int argc, char **argv)
 
     double X_x,X_y,X_z;
     double viscosity,radius;
-    while(nucfile >> X_x >> X_y >> X_z >> viscosity >> radius) {
+    while(nucfile >> X_x >> X_y >> X_z >> radius >> viscosity) {
       X_is.push_back({X_x,X_y,X_z});
-      viscosities.push_back(viscosity);
       radii.push_back(radius);
-      
+      viscosities.push_back(viscosity);      
     }
 
   }
