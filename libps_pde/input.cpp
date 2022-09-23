@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <cmath>
 
 #include "input.hpp"
 
@@ -280,7 +281,7 @@ namespace input {
 	  continue;
 	}
 
-	if (std::abs(t-starttime) < tol) {
+	if (fabs(t-starttime) < tol) {
 	  previousline = line;
 	  break;
 	} else if (t > starttime) {
