@@ -1,9 +1,9 @@
 #include <fstream>
 #include <chrono>
+#include <random>
 
 #include "fftw_mpi_3darray.hpp"
 #include "integrator.hpp"
-//#include "linker.hpp"
 #include "conjplane.hpp"
 #include "randompll.hpp"
 #include "griddata.hpp"
@@ -15,12 +15,13 @@
 
 void X_i_of_t(std::vector<double> & X_i,
 	      const std::vector<double> & dFdX_i,double dt,
-	      double radius, double viscosity)
+	      double radius, double viscosity,double temp,
+	      double randx, double randy, double randz)
 {
-  double fric = 1./(6*M_PI*viscosity*radius);
-  X_i[0] += -dt*dFdX_i[0]*fric;
-  X_i[1] += -dt*dFdX_i[1]*fric;
-  X_i[2] += -dt*dFdX_i[2]*fric;
+  double fric = 6*M_PI*viscosity*radius;
+  X_i[0] += -dt*dFdX_i[0]/fric + sqrt(24*temp/fric*dt)*randx;
+  X_i[1] += -dt*dFdX_i[1]/fric + sqrt(24*temp/fric*dt)*randy;
+  X_i[2] += -dt*dFdX_i[2]/fric + sqrt(24*temp/fric*dt)*randz;
   return;
 }
 
@@ -41,6 +42,10 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
   fftw_plan forward_phi, backward_phi;
   fftw_plan forward_nonlinear, backward_nonlinear;
 
+  // can use the global seed, as it is just used to generate seeds but not actually
+  //  used as a seed itself.
+  std::mt19937 dropgen(gp.seed);
+  std::uniform_real_distribution<double> real_dist(-0.5,0.5);
   
   forward_phi = fftw_mpi_plan_dft_r2c_3d(gp.realspace.get_Nz(),gp.realspace.get_Ny(),
 					 gp.realspace.get_Nx(),
@@ -259,8 +264,11 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
     t += integrator.get_dt();
 
     for (unsigned index = 0; index < X_is.size(); index ++ ) {
+      double randx = real_dist(dropgen);
+      double randy = real_dist(dropgen);
+      double randz = real_dist(dropgen);
       X_i_of_t(X_is[index],free_energy_derivs[index],integrator.get_dt(),radii[index],
-	       viscosities[index]);
+	       viscosities[index],solparams.temp,randx,randy,randz);
     }
     
     
