@@ -16,12 +16,13 @@
 void X_i_of_t(std::vector<double> & X_i,
 	      const std::vector<double> & dFdX_i,double dt,
 	      double radius, double viscosity,double temp,
-	      double randx, double randy, double randz)
+	      double randx, double randy, double randz,
+	      int noiseon)
 {
   double fric = 6*M_PI*viscosity*radius;
-  X_i[0] += -dt*dFdX_i[0]/fric + sqrt(24*temp/fric*dt)*randx;
-  X_i[1] += -dt*dFdX_i[1]/fric + sqrt(24*temp/fric*dt)*randy;
-  X_i[2] += -dt*dFdX_i[2]/fric + sqrt(24*temp/fric*dt)*randz;
+  X_i[0] += -dt*dFdX_i[0]/fric + noiseon*sqrt(24*temp/fric*dt)*randx;
+  X_i[1] += -dt*dFdX_i[1]/fric + noiseon*sqrt(24*temp/fric*dt)*randy;
+  X_i[2] += -dt*dFdX_i[2]/fric + noiseon*sqrt(24*temp/fric*dt)*randz;
   return;
 }
 
@@ -232,6 +233,7 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
   double free_energy;
   for (int it = 1+gp.startstep; it <= gp.steps+gp.startstep; it ++) {
 
+
     auto current_time = Clock::now();
 
     free_energy_derivs = integrator.nonlinear(nonlinear,phi,X_is,free_energy); // compute nl(t) given phi(t)
@@ -268,7 +270,7 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
       double randy = real_dist(dropgen);
       double randz = real_dist(dropgen);
       X_i_of_t(X_is[index],free_energy_derivs[index],integrator.get_dt(),radii[index],
-	       viscosities[index],solparams.temp,randx,randy,randz);
+	       viscosities[index],solparams.temp,randx,randy,randz,gp.X_i_noise);
     }
     
     

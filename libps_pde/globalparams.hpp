@@ -17,11 +17,13 @@ private:
 public:
   GlobalParams(const MPI_Comm, const int, const int,std::ifstream&,
 	       std::map<std::string,std::string> const &,
-	       std::string&);
+	       std::string&,
+	       std::vector<std::string> EO_globals = {"build_solution"});
 
   bool restart_flag,read_flag,all_nucs_flag;
   int startstep;
   double starttime;
+  int X_i_noise;
   
   int steps,seed,dump_every,thermo_every;
   double dt, volFrac,variance;

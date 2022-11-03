@@ -9,11 +9,12 @@ using namespace psPDE;
 GlobalParams::GlobalParams(const MPI_Comm comm, const int id, const int mpi_size,
 			   std::ifstream& input,
 			   std::map<std::string,std::string> const& varMap,
-			   std::string& lastline) :
+			   std::string& lastline,
+			   std::vector<std::string> EO_globals) :
 
   restart_flag(false),read_flag(false),all_nucs_flag(false),startstep(0),
-  starttime(0.0),steps(100),seed(129480),dump_every(100),thermo_every(100),
-  dt(1e-4),volFrac(-1),variance(-1),dump_file(""),
+  starttime(0.0),X_i_noise(0),steps(100),seed(129480),dump_every(100),
+  thermo_every(100),dt(1e-4),volFrac(-1),variance(-1),dump_file(""),
   thermo_file(""),comm(comm), id(id),mpi_size(mpi_size),
   realspace(64,64,64,100.0,100.0,100.0),fourier(realspace)
 {
@@ -45,11 +46,16 @@ GlobalParams::GlobalParams(const MPI_Comm comm, const int id, const int mpi_size
       
       splitvec = input::split_line(line);
       
+      int break_global = 0;
       // if build_solution, then global variable definitions are done
-      if (splitvec[0] == "build_solution") {
-	break;
-      }
+      for (auto &eo_glob : EO_globals)
+	if (splitvec[0] == eo_glob) {
+	  break_global = 1;
+	  break;
+	}
 
+      if (break_global) break;
+      
       if (splitvec[0] == "read") {
 	input::convertVariable(splitvec.at(1),varMap);
 	input::convertVariable(splitvec.at(2),varMap);
@@ -110,6 +116,13 @@ GlobalParams::GlobalParams(const MPI_Comm comm, const int id, const int mpi_size
 	  thermo_file = splitvec[1];
 	} else if (splitvec[0] == "seed") {
 	  input::isInt(splitvec[1],seed,splitvec[0]);
+	} else if (splitvec[0] == "nucleation_noise") {
+	  if (splitvec[1] == "on") 
+	    X_i_noise = 1;	   
+	  else if (splitvec[1] == "off") 
+	    X_i_noise = 0;
+	  else
+	    throw std::runtime_error("Error: invalid input file.");
 	} else {
 	  throw std::runtime_error("Error: invalid input file.");
 	}
