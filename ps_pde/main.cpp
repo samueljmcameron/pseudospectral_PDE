@@ -121,6 +121,7 @@ int main(int argc, char **argv)
   }
 
   std::vector<std::vector<double>> X_is;
+  std::vector<double> nucmaxs;
   std::vector<double> radii;
   std::vector<double> viscosities;
   
@@ -130,9 +131,10 @@ int main(int argc, char **argv)
   } else {
 
     double X_x,X_y,X_z;
-    double viscosity,radius;
-    while(nucfile >> X_x >> X_y >> X_z >> radius >> viscosity) {
+    double nucmax,viscosity,radius;
+    while(nucfile >> X_x >> X_y >> X_z >> nucmax >> radius >> viscosity) {
       X_is.push_back({X_x,X_y,X_z});
+      nucmaxs.push_back(nucmax);
       radii.push_back(radius);
       viscosities.push_back(viscosity);      
     }
@@ -143,7 +145,7 @@ int main(int argc, char **argv)
 
   if (simulation_type == "run") {
     std::cout << "Running simulation of solution." << std::endl;
-    run(gp,solparams,X_is,radii,viscosities);
+    run(gp,solparams,X_is,nucmaxs,radii,viscosities);
   }
 
   std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();

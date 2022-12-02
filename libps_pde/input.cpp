@@ -120,7 +120,7 @@ namespace input {
 
   // read in radii, viscosities, and also add to the nucs_to_keep vector if the
   // all_nucs_flag = true
-  void read_in_nuclei_properties(std::vector<double> &radii,
+  void read_in_nuclei_properties(std::vector<double> &nucmaxs,std::vector<double> &radii,
 				 std::vector<double> &viscosities,
 				 std::vector<int> &nucs_to_keep,
 				 bool all_nucs_flag,
@@ -136,7 +136,7 @@ namespace input {
     if (mpi_id == 0) {
 
       try {
-	getNucleiProperties(filename,radii,viscosities,nucs_to_keep,all_nucs_flag);
+	getNucleiProperties(filename,nucmaxs,radii,viscosities,nucs_to_keep,all_nucs_flag);
       }
       catch (const std::runtime_error & error) {
 	signal = -1;
@@ -156,7 +156,7 @@ namespace input {
     }
     MPI_Bcast(&n2ksize,1,MPI_INT,0,comm);
 
-    
+    nucmaxs.resize(original_vecprop_size + n2ksize);
     radii.resize(original_vecprop_size + n2ksize);
     viscosities.resize(original_vecprop_size + n2ksize);
     nucs_to_keep.resize(n2ksize);
@@ -166,7 +166,8 @@ namespace input {
 
       if (all_nucs_flag)
 	MPI_Bcast(&nucs_to_keep.at(index),1,MPI_INT,0,comm);
-      
+
+      MPI_Bcast(&nucmaxs.at(index+original_vecprop_size),1,MPI_DOUBLE,0,comm);      
       MPI_Bcast(&radii.at(index+original_vecprop_size),1,MPI_DOUBLE,0,comm);
       MPI_Bcast(&viscosities.at(index+original_vecprop_size),1,MPI_DOUBLE,0,comm);
     }
@@ -248,7 +249,8 @@ namespace input {
 
 
   // run this from a single processor only!
-  void getNucleiProperties(std::string filename,std::vector<double> & radii,
+  void getNucleiProperties(std::string filename,std::vector<double> & nucmaxs,
+			   std::vector<double> & radii,
 			   std::vector<double> & viscosities,
 			   std::vector<int> & nucs_to_keep,
 			   bool all_nucs_flag)
@@ -259,17 +261,18 @@ namespace input {
     std::vector<std::string> split;
     std::string::size_type sz;
 
+    const int numentries = 5;
     
     
     if (myfile) {
 
       std::getline(myfile,line);
-      // expect first line to be "# nucnum radius viscosity"
+      // expect first line to be "# nucnum nucmax radius viscosity"
       split = split_line(line);
-      if (split.size() != 4) std::runtime_error("Incorrect format of file " + filename);
+      if (split.size() != numentries) std::runtime_error("Incorrect format of file " + filename);
 
       int nucnum;
-      double rad,visc;
+      double nucmax,rad,visc;
 
       // read in radii and viscosities
       
@@ -279,7 +282,7 @@ namespace input {
 
 	// expect relevant lines to be "# {nucnum} {radius} {viscosity}"
 	
-	if (split.size() != 4) break;
+	if (split.size() != numentries) break;
 	
 	// store only those nuclei which are meant to be kept.
 	
@@ -287,15 +290,19 @@ namespace input {
 
 	if (all_nucs_flag) {
 	  nucs_to_keep.push_back(nucnum);
-	  rad = std::stod(split.at(2), &sz);
-	  visc = std::stod(split.at(3), &sz);
+	  nucmax = std::stod(split.at(2), &sz);
+	  rad = std::stod(split.at(3), &sz);
+	  visc = std::stod(split.at(4), &sz);
+	  nucmaxs.push_back(nucmax);
 	  radii.push_back(rad);
 	  viscosities.push_back(visc);
 	} else {	  
 	  for (auto nuc : nucs_to_keep) {
 	    if (nucnum == nuc) {
-	      rad = std::stod(split.at(2), &sz);
-	      visc = std::stod(split.at(3), &sz);
+	      nucmax = std::stod(split.at(2), &sz);
+	      rad = std::stod(split.at(3), &sz);
+	      visc = std::stod(split.at(4), &sz);
+	      nucmaxs.push_back(nucmax);
 	      radii.push_back(rad);
 	      viscosities.push_back(visc);
 	    }

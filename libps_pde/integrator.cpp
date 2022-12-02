@@ -8,7 +8,7 @@ Integrator::Integrator(MPI_Comm comm,const GridData& fourier, const int seed,
   : 
   seed(seed),mobility(solparams.mobility),gamma(solparams.gamma),
   temp(solparams.temp),chi(solparams.chi), volFH(solparams.volFH),
-  chi_LP(solparams.chi_LP),nucmax(solparams.nucmax),nucwidth(solparams.nucwidth),
+  chi_LP(solparams.chi_LP),nucwidth(solparams.nucwidth),
   normalization(1.0/(fourier.get_Nx()*fourier.get_Ny()*fourier.get_Nz())),
   dt(dt),real_dist(-0.5,0.5),ft_phi(comm,"ft_phi",fourier),
   ft_nonlinear(comm,"ft_nl",fourier)
@@ -50,6 +50,7 @@ void Integrator::initialize(fftw_MPI_3Darray<double> & phi,
 std::vector<std::vector<double>> Integrator::nonlinear(fftw_MPI_3Darray<double>& nonlinear,
 						       const fftw_MPI_3Darray<double>& phi,
 						       const std::vector<std::vector<double>> & X_is,
+						       const std::vector<double> & nucmaxs,
 						       double & free_energy)
 {
 
@@ -98,14 +99,11 @@ std::vector<std::vector<double>> Integrator::nonlinear(fftw_MPI_3Darray<double>&
       for (int k = 0; k < nonlinear.axis_size(2); k++) {
 	x = dx*k + Ox;
 
-	integralprefactor = chi_LP*((phi(i,j,k)-nucmax)
-				    *(phi(i,j,k)-nucmax)*dx*dy*dz);
-	philink = linker_phi(x,y,z,Lx,Ly,Lz,X_is,integralprefactor,dFdX_is);
+	philink = linker_phi(x,y,z,Lx,Ly,Lz,phi(i,j,k),dx,dy,dz,X_is,nucmaxs,dFdX_is,
+			     free_energy);
 	nonlinear(i,j,k) 
-	  = temp/volFH*(log(phi(i,j,k)/(1-phi(i,j,k)))+chi*(1-2*phi(i,j,k))
-			+2*philink*(phi(i,j,k)-nucmax));
-	  //= temp/volFH*chi*phi(i,j,k);
-	free_energy += philink*integralprefactor;
+	  = temp/volFH*(log(phi(i,j,k)/(1-phi(i,j,k)))+chi*(1-2*phi(i,j,k))+2*philink);
+	//= temp/volFH*chi*phi(i,j,k);
 
       }
     }
@@ -199,10 +197,12 @@ void Integrator::ode(std::complex<double> & y, std::complex<double> ynl,
 
 /* function expects that x-X_i etc are appropriately wrapped. */
 double Integrator::linker_phi(double x, double y, double z,double Lx,
-			      double Ly, double Lz,
+			      double Ly, double Lz,double phi,
+			      double dx, double dy, double dz,
 			      const std::vector<std::vector<double>> & X_is,
-			      double integralprefactor,
-			      std::vector<std::vector<double>> & dFdXlike)
+			      const std::vector<double> & nucmaxs,
+			      std::vector<std::vector<double>> & dFdXlike,
+			      double &free_energy)
 {
 
 
@@ -211,10 +211,12 @@ double Integrator::linker_phi(double x, double y, double z,double Lx,
   double tmp;
 
   double xtmp,ytmp,ztmp;
+  double integralprefactor;
 
   
   for (int index = 0; index < X_is.size(); index ++) {
 
+    integralprefactor = chi_LP*((phi-nucmaxs[index])*(phi-nucmaxs[index])*dx*dy*dz);
     xtmp = x;
     ytmp = y;
     ztmp = z;
@@ -242,8 +244,8 @@ double Integrator::linker_phi(double x, double y, double z,double Lx,
     
     tmp = exp(-(xtmp*xtmp + ytmp*ytmp + ztmp*ztmp)/2.0);
     
-    sum += tmp;
-
+    sum += tmp*(phi-nucmaxs[index]);
+    free_energy += tmp*integralprefactor;
 
     dFdXlike[index][0] += xtmp/nucwidth*tmp*integralprefactor;
     dFdXlike[index][1] += ytmp/nucwidth*tmp*integralprefactor;

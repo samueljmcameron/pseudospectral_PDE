@@ -26,7 +26,6 @@ private:
   const double chi;
   const double volFH;
   const double chi_LP;
-  const double nucmax;
   const double nucwidth;
   
   const double normalization;
@@ -57,7 +56,7 @@ public:
   std::vector<std::vector<double>> nonlinear(fftw_MPI_3Darray<double>&,
 					     const fftw_MPI_3Darray<double>&,
 					     const std::vector<std::vector<double>> &,
-					     double &);
+					     const std::vector<double> &, double &);
     
 
   double get_dt() { return dt; };
@@ -67,8 +66,10 @@ public:
 
 
   double linker_phi(double , double , double ,double,double,double,
+		    double,double,double,double,
 		    const std::vector<std::vector<double>> & ,
-		    double, std::vector<std::vector<double>> &);
+		    const std::vector<double> & ,
+		    std::vector<std::vector<double>> &, double &);
 
   void linker_derivative(std::vector<double> &,double, double ,
 			 double ,double,double, double,

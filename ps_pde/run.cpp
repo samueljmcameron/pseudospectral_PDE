@@ -28,7 +28,8 @@ void X_i_of_t(std::vector<double> & X_i,
 
 
 void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
-	 std::vector<std::vector<double>> &X_is,
+	 std::vector<std::vector<double>> & X_is,
+	 std::vector<double> & nucmaxs,
 	 std::vector<double> & radii, std::vector<double> & viscosities) {
 
   
@@ -112,7 +113,7 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
 			       + std::string("restarting a file. Use read instead."));
 
 
-    psPDE::input::read_in_nuclei_properties(radii,viscosities,gp.nucs_to_keep,
+    psPDE::input::read_in_nuclei_properties(nucmaxs,radii,viscosities,gp.nucs_to_keep,
 					    true,gp.thermo_file,
 					    gp.comm,gp.id);
     
@@ -147,7 +148,7 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
     if (gp.read_flag) {
       psPDE::ioVTK::readVTKImageData({&phi},gp.read_dump_file);
       
-      psPDE::input::read_in_nuclei_properties(radii,viscosities,gp.nucs_to_keep,
+      psPDE::input::read_in_nuclei_properties(nucmaxs,radii,viscosities,gp.nucs_to_keep,
 					      gp.all_nucs_flag,gp.read_thermo_file,
 					      gp.comm,gp.id);
       
@@ -192,8 +193,9 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
 
       myfile << "# nucnum \t radius \t viscosity " << std::endl;
       for (int index =  0; index < viscosities.size(); index++ ) {
-	myfile << "# " << index << " \t " << radii.at(index) << " \t "
-	       << viscosities.at(index) << std::endl;
+	myfile << "# " << index << " \t " << nucmaxs.at(index) << "\t" 
+	       << radii.at(index) << " \t " << viscosities.at(index) 
+	       << std::endl;
       }
       
       
@@ -236,7 +238,7 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
 
     auto current_time = Clock::now();
 
-    free_energy_derivs = integrator.nonlinear(nonlinear,phi,X_is,free_energy); // compute nl(t) given phi(t)
+    free_energy_derivs = integrator.nonlinear(nonlinear,phi,X_is,nucmaxs,free_energy); // compute nl(t) given phi(t)
 
     tt_freeenergy += Clock::now() - current_time;
 

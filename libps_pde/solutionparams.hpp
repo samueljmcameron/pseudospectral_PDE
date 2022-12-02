@@ -15,7 +15,7 @@ public:
 
 
   double mobility, volFH, gamma,temp, chi;
-  double chi_LP,chi_LL, nucmax, nucwidth;
+  double chi_LP,chi_LL, nucwidth;
   double viscosity;
   
   void printall();  

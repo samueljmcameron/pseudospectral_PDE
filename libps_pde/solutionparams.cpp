@@ -7,15 +7,13 @@ using namespace psPDE;
 
 SolutionParams::SolutionParams()
   : mobility(0.01),volFH(0.01),gamma(10.0),
-    temp(4.114),chi(2.5),chi_LP(2.5),chi_LL(2.5),nucmax(0.9),
-    nucwidth(1.0) {}
+    temp(4.114),chi(2.5),chi_LP(2.5),chi_LL(2.5),nucwidth(1.0) {}
 
 
 
 SolutionParams::SolutionParams(std::vector<std::string> splitvec)
   : mobility(0.01),volFH(0.01),gamma(10.0),
-    temp(4.114),chi(2.5),chi_LP(2.5),chi_LL(2.5),nucmax(0.9),
-    nucwidth(1.0)
+    temp(4.114),chi(2.5),chi_LP(2.5),chi_LL(2.5), nucwidth(1.0)
 {
   int nargs = splitvec.size();
   int iarg = 0;
@@ -43,9 +41,6 @@ SolutionParams::SolutionParams(std::vector<std::string> splitvec)
     } else if (splitvec[iarg] == "chi_LL") {
       input::isDouble(splitvec[iarg+1],chi_LL,splitvec[iarg]);
       iarg += 2;
-    } else if (splitvec[iarg] == "nucmax") {
-      input::isDouble(splitvec[iarg+1],nucmax,splitvec[iarg]);
-      iarg += 2;
     } else if (splitvec[iarg] == "nucwidth") {
       input::isDouble(splitvec[iarg+1],nucwidth,splitvec[iarg]);
       iarg += 2;
@@ -70,7 +65,6 @@ void SolutionParams::printall()
   std::cout << "chi: " << chi << "." << std::endl;
   std::cout << "chi_LP: " << chi_LP << "." << std::endl;
   std::cout << "chi_LL: " << chi_LL << "." << std::endl;
-  std::cout << "nucmax: " << nucmax << "." << std::endl;
   std::cout << "nucwidth: " << nucwidth << "." << std::endl;
 
 }

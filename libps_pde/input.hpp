@@ -14,7 +14,8 @@ namespace input {
   void convertVariable(std::string &,
 		       std::map<std::string, std::string> const&);
 
-  void read_in_nuclei_properties(std::vector<double> &radii,
+  void read_in_nuclei_properties(std::vector<double> &nucmaxs,
+				 std::vector<double> &radii,
 				 std::vector<double> &viscosities,
 				 std::vector<int> &nucs_to_keep,
 				 bool all_nucs_flag,
@@ -27,7 +28,8 @@ namespace input {
 		      double starttime);
 
 
-  void getNucleiProperties(std::string filename,std::vector<double> & radii,
+  void getNucleiProperties(std::string filename,std::vector<double> & nucmaxs,
+			   std::vector<double> & radii,
 			   std::vector<double> & viscosities,
 			   std::vector<int> & nucs_to_keep,
 			   bool all_nucs_flag);
