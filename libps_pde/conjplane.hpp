@@ -27,8 +27,8 @@ class ConjPlane
 
   
   // arrays for transferring via mpi
-  sMatrix<std::complex<double>> block0,block1,block2,block3;
-  sMatrix<std::complex<double>> line0,line1,line2,line3;
+  std::vector<sMatrix<std::complex<double>>> blocks;
+  std::vector<sMatrix<std::complex<double>>> lines;
 
   void lefthalf_equal(Integrator &,int);
   void lefthalf_unequal(Integrator &,int);

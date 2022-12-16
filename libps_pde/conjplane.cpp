@@ -12,8 +12,7 @@ ConjPlane::ConjPlane(int numprocs,int mpi_id,
 		     MPI_Comm communicator,std::vector<int> all_cNzs,
 		     int Ny)
   :   mpi_size(numprocs),id(mpi_id),comm(communicator), cNy(Ny),
-      nreq(4), block0(), block1(), block2(), block3(),
-      line0(), line1(), line2(), line3()
+      nreq(4)
 {
 
 
@@ -57,43 +56,48 @@ ConjPlane::ConjPlane(int numprocs,int mpi_id,
     equal_flag = true;
     divider = mpi_size/2;
     
-    block0.size(1,Ny/2);
-    block1.size(x-1,Ny/2);
-    block2.size(1,Ny/2);
-    block3.size(x-1,Ny/2);
+    blocks.push_back(sMatrix<std::complex<double>>(1,Ny/2));
+    blocks.push_back(sMatrix<std::complex<double>>(x-1,Ny/2));
+    blocks.push_back(sMatrix<std::complex<double>>(1,Ny/2));
+    blocks.push_back(sMatrix<std::complex<double>>(x-1,Ny/2));
 
-    line0.size(1,1);
-    line1.size(x-1,1);
-    line2.size(1,1);
-    line3.size(x-1,1);
+    lines.push_back(sMatrix<std::complex<double>>(1,1));
+    lines.push_back(sMatrix<std::complex<double>>(x-1,1));
+    lines.push_back(sMatrix<std::complex<double>>(1,1));
+    lines.push_back(sMatrix<std::complex<double>>(x-1,1));
     
   } else {
     
     equal_flag = false;
     divider = (mpi_size-1)/2;
 
+    blocks.resize(4);
+    lines.resize(4);
     
     if (id == 0 || id == mpi_size-1) {
-      block0.size(y,Ny/2);
-      block2.size(y,Ny/2);
+      blocks[0] = sMatrix<std::complex<double>>(y,Ny/2);
+      blocks[2] = sMatrix<std::complex<double>>(y,Ny/2);
 
-      line0.size(y,1);
-      line2.size(y,1);
+      lines[0] = sMatrix<std::complex<double>>(y,1);
+      lines[2] = sMatrix<std::complex<double>>(y,1);
+
       
     } else {
-      block0.size(y+1,Ny/2);
-      block2.size(y+1,Ny/2);
+      blocks[0] = sMatrix<std::complex<double>>(y+1,Ny/2);
+      blocks[2] = sMatrix<std::complex<double>>(y+1,Ny/2);
+
+      lines[0] = sMatrix<std::complex<double>>(y+1,1);
+      lines[2] = sMatrix<std::complex<double>>(y+1,1);
+
       
-      line0.size(y+1,1);
-      line2.size(y+1,1);
       
     }
-    
-    block1.size(x-y-1,Ny/2);
-    block3.size(x-y-1,Ny/2);
 
-    line1.size(x-y-1,1);
-    line3.size(x-y-1,1);
+    blocks[1] = sMatrix<std::complex<double>>(x-y-1,Ny/2);
+    blocks[3] = sMatrix<std::complex<double>>(x-y-1,Ny/2);
+
+    lines[1] = sMatrix<std::complex<double>>(x-y-1,1);
+    lines[3] = sMatrix<std::complex<double>>(x-y-1,1);
     
   }    
 
@@ -216,22 +220,22 @@ void ConjPlane::first(Integrator & integrator,int nx)
       //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
       
       
-      block1(block1.axis_size(0)-i,block1.axis_size(1)-j) = std::conj(integrator.ft_phi(i,j,nx));
+      blocks[1](blocks[1].axis_size(0)-i,blocks[1].axis_size(1)-j) = std::conj(integrator.ft_phi(i,j,nx));
       
     }
   }
   
-  MPI_Isend(block1.data(),block1.size()*2,MPI_DOUBLE,mpi_size-1,1,
+  MPI_Isend(blocks[1].data(),blocks[1].size()*2,MPI_DOUBLE,mpi_size-1,1,
 	    comm,&block_requests[0]);
   
   // receive from bottom right square 
-  MPI_Recv(block3.data(), block3.size()*2,MPI_DOUBLE,mpi_size-1,3,
+  MPI_Recv(blocks[3].data(), blocks[3].size()*2,MPI_DOUBLE,mpi_size-1,3,
 	   comm,MPI_STATUS_IGNORE);
   
   for (int i = 1; i < cNz; i++) {
     for (int j = cNy/2+1; j < cNy; j++) {
       
-      integrator.ft_phi(i,j,nx) = block3(i-1,j-block3.axis_size(1));
+      integrator.ft_phi(i,j,nx) = blocks[3](i-1,j-blocks[3].axis_size(1));
       
       
     }
@@ -254,7 +258,7 @@ void ConjPlane::last(Integrator & integrator,int nx)
 
   
   // send from far right corner of bottom right square
-  for (int i = 0; i < block2.axis_size(0); i++) {
+  for (int i = 0; i < blocks[2].axis_size(0); i++) {
 
     for (int j = 1; j < cNy/2; j++) {
       
@@ -263,22 +267,22 @@ void ConjPlane::last(Integrator & integrator,int nx)
       //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
       
       
-      block2(block2.axis_size(0)-i-1,block2.axis_size(1)-j) = std::conj(integrator.ft_phi(i,j,nx));
+      blocks[2](blocks[2].axis_size(0)-i-1,blocks[2].axis_size(1)-j) = std::conj(integrator.ft_phi(i,j,nx));
       
     }
   }
   
-  MPI_Isend(block2.data(),block2.size()*2,MPI_DOUBLE,mpi_size-id-1,2,
+  MPI_Isend(blocks[2].data(),blocks[2].size()*2,MPI_DOUBLE,mpi_size-id-1,2,
 	    comm,&block_requests[2]);
   
   // receive from bottom left square 1 <= y < Nz/2, z <= 1 < Ny/2
-  MPI_Recv(block0.data(), block0.size()*2,MPI_DOUBLE,mpi_size-id-1,0,
+  MPI_Recv(blocks[0].data(), blocks[0].size()*2,MPI_DOUBLE,mpi_size-id-1,0,
 	   comm,MPI_STATUS_IGNORE);
   
-  for (int i = 0; i < block0.axis_size(0); i++) {
+  for (int i = 0; i < blocks[0].axis_size(0); i++) {
     for (int j = cNy/2+1; j < cNy; j++) {
       
-      integrator.ft_phi(i,j,nx) = block0(i,j-block0.axis_size(1));
+      integrator.ft_phi(i,j,nx) = blocks[0](i,j-blocks[0].axis_size(1));
       
       
     }
@@ -347,21 +351,21 @@ void ConjPlane::line_first(Integrator &integrator, int nx)
     //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
       
       
-    line1(line1.axis_size(0)-i,0) = std::conj(integrator.ft_phi(i,ny,nx));
+    lines[1](lines[1].axis_size(0)-i,0) = std::conj(integrator.ft_phi(i,ny,nx));
       
     
   }
   
-  MPI_Isend(line1.data(),line1.size()*2,MPI_DOUBLE,mpi_size-1,1,
+  MPI_Isend(lines[1].data(),lines[1].size()*2,MPI_DOUBLE,mpi_size-1,1,
 	    comm,&line_requests[0]);
   
   // receive from bottom right square 
-  MPI_Recv(line3.data(), line3.size()*2,MPI_DOUBLE,mpi_size-1,3,
+  MPI_Recv(lines[3].data(), lines[3].size()*2,MPI_DOUBLE,mpi_size-1,3,
 	   comm,MPI_STATUS_IGNORE);
   
   ny = cNy/2;
   for (int i = 1; i < cNz; i++) {
-    integrator.ft_phi(i,ny,nx) = line3(i-1,0);
+    integrator.ft_phi(i,ny,nx) = lines[3](i-1,0);
   }
   
   
@@ -381,25 +385,25 @@ void ConjPlane::line_last(Integrator & integrator,int nx)
   int ny = cNy/2;
   
   // send from far right corner of bottom right square
-  for (int i = 0; i < line2.axis_size(0); i++) {
+  for (int i = 0; i < lines[2].axis_size(0); i++) {
     integrator.integrate(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
     //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
 
-    line2(line2.axis_size(0)-i-1,0) = std::conj(integrator.ft_phi(i,ny,nx));
+    lines[2](lines[2].axis_size(0)-i-1,0) = std::conj(integrator.ft_phi(i,ny,nx));
 
   }
   
-  MPI_Isend(line2.data(),line2.size()*2,MPI_DOUBLE,mpi_size-id-1,2,
+  MPI_Isend(lines[2].data(),lines[2].size()*2,MPI_DOUBLE,mpi_size-id-1,2,
 	    comm,&line_requests[2]);
   
   // receive from bottom left square 1 <= y < Nz/2, z <= 1 < Ny/2
-  MPI_Recv(line0.data(), line0.size()*2,MPI_DOUBLE,mpi_size-id-1,0,
+  MPI_Recv(lines[0].data(), lines[0].size()*2,MPI_DOUBLE,mpi_size-id-1,0,
 	   comm,MPI_STATUS_IGNORE);
 
   ny = 0;
-  for (int i = 0; i < line0.axis_size(0); i++) {
+  for (int i = 0; i < lines[0].axis_size(0); i++) {
     
-    integrator.ft_phi(i,ny,nx) = line0(i,0);
+    integrator.ft_phi(i,ny,nx) = lines[0](i,0);
 
   }
   
@@ -479,13 +483,13 @@ void ConjPlane::lefthalf_equal(Integrator & integrator,int nx)
     integrator.integrate(nz,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
     //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
     
-    block0(nz,block0.axis_size(1)-j) = std::conj(integrator.ft_phi(nz,j,nx));
+    blocks[0](nz,blocks[0].axis_size(1)-j) = std::conj(integrator.ft_phi(nz,j,nx));
     
   }
   
 
   
-  MPI_Isend(block0.data(),block0.size()*2,MPI_DOUBLE,mpi_size-id,0,
+  MPI_Isend(blocks[0].data(),blocks[0].size()*2,MPI_DOUBLE,mpi_size-id,0,
 	    comm,&block_requests[0]);
   
   for (int i = 1; i < cNz ; i++) {
@@ -493,13 +497,13 @@ void ConjPlane::lefthalf_equal(Integrator & integrator,int nx)
     for (int j = 1; j < cNy/2; j++ ) {
       
       integrator.integrate(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
-      block1(block1.axis_size(0)-i,block1.axis_size(1)-j)
+      blocks[1](blocks[1].axis_size(0)-i,blocks[1].axis_size(1)-j)
 	= std::conj(integrator.ft_phi(i,j,nx));
       
     }
   }
   
-  MPI_Isend(block1.data(),block1.size()*2,MPI_DOUBLE,mpi_size-id-1,1,
+  MPI_Isend(blocks[1].data(),blocks[1].size()*2,MPI_DOUBLE,mpi_size-id-1,1,
 	    comm,&block_requests[1]);
   
   
@@ -508,14 +512,14 @@ void ConjPlane::lefthalf_equal(Integrator & integrator,int nx)
   // (1 <= y < Nz/2, Ny/2 < z < Ny)
   
   
-  MPI_Irecv(block2.data(), block2.size()*2,MPI_DOUBLE,mpi_size-id,2,
+  MPI_Irecv(blocks[2].data(), blocks[2].size()*2,MPI_DOUBLE,mpi_size-id,2,
 	    comm,&block_requests[2]);
   
-  MPI_Irecv(block3.data(), block3.size()*2,MPI_DOUBLE,mpi_size-id-1,3,
+  MPI_Irecv(blocks[3].data(), blocks[3].size()*2,MPI_DOUBLE,mpi_size-id-1,3,
 	    comm,&block_requests[3]);
   
   
-  // now fill phi with block3 and block4 received data in an efficient manner
+  // now fill phi with blocks[3] and block4 received data in an efficient manner
   
   int b2flag=0;
   int b3flag = 0;
@@ -529,11 +533,11 @@ void ConjPlane::lefthalf_equal(Integrator & integrator,int nx)
   }
   
   
-  if (b2flag) { // if block2 is received first
+  if (b2flag) { // if blocks[2] is received first
 
     for (int j = cNy/2+1; j < cNy; j++) {
 	
-	integrator.ft_phi(nz,j,nx) = block2(nz,j-block2.axis_size(1));
+	integrator.ft_phi(nz,j,nx) = blocks[2](nz,j-blocks[2].axis_size(1));
 	
     }
     
@@ -542,16 +546,16 @@ void ConjPlane::lefthalf_equal(Integrator & integrator,int nx)
     for (int i = 1; i < cNz; i++) {
       for (int j = cNy/2+1; j < cNy; j++) {
 	
-	integrator.ft_phi(i,j,nx) = block3(i-1,j-block3.axis_size(1));
+	integrator.ft_phi(i,j,nx) = blocks[3](i-1,j-blocks[3].axis_size(1));
 	
       }
     }
-  } else if (b3flag) { // if block3 is received first
+  } else if (b3flag) { // if blocks[3] is received first
 
     for (int i = 1; i < cNz; i++) {
       for (int j = cNy/2+1; j < cNy; j++) {
 	
-	integrator.ft_phi(i,j,nx) = block3(i-1,j-block3.axis_size(1));
+	integrator.ft_phi(i,j,nx) = blocks[3](i-1,j-blocks[3].axis_size(1));
 	
       }
     }
@@ -562,7 +566,7 @@ void ConjPlane::lefthalf_equal(Integrator & integrator,int nx)
     
     for (int j = cNy/2+1; j < cNy; j++) {
       
-      integrator.ft_phi(nz,j,nx) = block2(nz,j-block2.axis_size(1));
+      integrator.ft_phi(nz,j,nx) = blocks[2](nz,j-blocks[2].axis_size(1));
       
     }
 
@@ -594,12 +598,12 @@ void ConjPlane::righthalf_equal(Integrator & integrator,int nx)
       //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
     
     
-    block2(0,block2.axis_size(1)-j) = std::conj(integrator.ft_phi(nz,j,nx));
+    blocks[2](0,blocks[2].axis_size(1)-j) = std::conj(integrator.ft_phi(nz,j,nx));
     
   }
 
 
-  MPI_Isend(block2.data(),block2.size()*2,MPI_DOUBLE,mpi_size-id,2,
+  MPI_Isend(blocks[2].data(),blocks[2].size()*2,MPI_DOUBLE,mpi_size-id,2,
 	      comm,&block_requests[2]);
     
     
@@ -608,24 +612,24 @@ void ConjPlane::righthalf_equal(Integrator & integrator,int nx)
       
       integrator.integrate(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       
-      block3(block3.axis_size(0)-i,block3.axis_size(1)-j)
+      blocks[3](blocks[3].axis_size(0)-i,blocks[3].axis_size(1)-j)
 	= std::conj(integrator.ft_phi(i,j,nx));
     }
     
   }
   
   
-  MPI_Isend(block3.data(),block3.size()*2,MPI_DOUBLE,mpi_size-id-1,3,
+  MPI_Isend(blocks[3].data(),blocks[3].size()*2,MPI_DOUBLE,mpi_size-id-1,3,
 	    comm,&block_requests[3]);
   
   
   // receive both from bottom left square, then fill in top right square
   
-  MPI_Irecv(block0.data(), block0.size()*2,MPI_DOUBLE,mpi_size-id,0,
+  MPI_Irecv(blocks[0].data(), blocks[0].size()*2,MPI_DOUBLE,mpi_size-id,0,
 	    comm,&block_requests[0]);
   
   
-  MPI_Irecv(block1.data(), block1.size()*2,MPI_DOUBLE,mpi_size-id-1,1,
+  MPI_Irecv(blocks[1].data(), blocks[1].size()*2,MPI_DOUBLE,mpi_size-id-1,1,
 	    comm,&block_requests[1]);
   
   
@@ -640,11 +644,11 @@ void ConjPlane::righthalf_equal(Integrator & integrator,int nx)
     MPI_Test(&block_requests[1],&b1flag,MPI_STATUS_IGNORE);
   }
   
-  if (b0flag) { // if block0 is received first
+  if (b0flag) { // if blocks[0] is received first
     
     for (int j = cNy/2+1; j < cNy; j++) {
       
-      integrator.ft_phi(nz,j,nx) = block0(nz,j-block0.axis_size(1));
+      integrator.ft_phi(nz,j,nx) = blocks[0](nz,j-blocks[0].axis_size(1));
       
     }
     
@@ -654,18 +658,18 @@ void ConjPlane::righthalf_equal(Integrator & integrator,int nx)
     for (int i = 1; i < cNz; i++) {
       for (int j = cNy/2+1; j < cNy; j++) {
 	
-	integrator.ft_phi(i,j,nx) = block1(i-1,j-block1.axis_size(1));
+	integrator.ft_phi(i,j,nx) = blocks[1](i-1,j-blocks[1].axis_size(1));
 	
       }
     }
     
     
-  } else if (b1flag) { // if block1 is received first
+  } else if (b1flag) { // if blocks[1] is received first
     
     for (int i = 1; i < cNz; i++) {
       for (int j = cNy/2+1; j < cNy; j++) {
 	
-	integrator.ft_phi(i,j,nx) = block1(i-1,j-block1.axis_size(1));
+	integrator.ft_phi(i,j,nx) = blocks[1](i-1,j-blocks[1].axis_size(1));
 	
       }
     }
@@ -675,7 +679,7 @@ void ConjPlane::righthalf_equal(Integrator & integrator,int nx)
 
     for (int j = cNy/2+1; j < cNy; j++) {
       
-      integrator.ft_phi(nz,j,nx) = block0(nz,j-block0.axis_size(1));
+      integrator.ft_phi(nz,j,nx) = blocks[0](nz,j-blocks[0].axis_size(1));
       
     }
     
@@ -708,31 +712,31 @@ void ConjPlane::middle_odd_equal(Integrator & integrator,int nx)
     integrator.integrate(nz,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
     //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
     
-    block0(nz,block0.axis_size(1)-j) = std::conj(integrator.ft_phi(nz,j,nx));
+    blocks[0](nz,blocks[0].axis_size(1)-j) = std::conj(integrator.ft_phi(nz,j,nx));
     
   }
   
 
   
-  MPI_Isend(block0.data(),block0.size()*2,MPI_DOUBLE,mpi_size-id,0,
+  MPI_Isend(blocks[0].data(),blocks[0].size()*2,MPI_DOUBLE,mpi_size-id,0,
 	    comm,&block_requests[0]);
 
 
   // receive one from next processor
 
-  MPI_Recv(block2.data(), block2.size()*2,MPI_DOUBLE,mpi_size-id,2,
+  MPI_Recv(blocks[2].data(), blocks[2].size()*2,MPI_DOUBLE,mpi_size-id,2,
 	   comm,MPI_STATUS_IGNORE);
 
   for (int j = cNy/2+1; j < cNy; j++) {
     
-    integrator.ft_phi(nz,j,nx) = block2(nz,j-block2.axis_size(1));
+    integrator.ft_phi(nz,j,nx) = blocks[2](nz,j-blocks[2].axis_size(1));
     
   }
 
 
   
   // write bottom left square to top right square where possible
-  for (int i = 1; i < (block1.axis_size(0)-1)/2+1; i++) {
+  for (int i = 1; i < (blocks[1].axis_size(0)-1)/2+1; i++) {
 
     for (int j = 1; j < cNy/2; j++) {
       
@@ -743,7 +747,7 @@ void ConjPlane::middle_odd_equal(Integrator & integrator,int nx)
     }
   }
   // write bottom right square to top left square where possible
-  for (int i = (block1.axis_size(0)-1)/2 + 2; i < cNz; i++) {
+  for (int i = (blocks[1].axis_size(0)-1)/2 + 2; i < cNz; i++) {
     for (int j = 1; j < cNy/2; j++ ) {
       integrator.integrate(i,j,nx);
       integrator.ft_phi(cNz-i,cNy-j,nx) = std::conj(integrator.ft_phi(i,j,nx));
@@ -752,7 +756,7 @@ void ConjPlane::middle_odd_equal(Integrator & integrator,int nx)
 
   
   // don't forget Nz/2 term!
-  nz = (block1.axis_size(0)-1)/2+1;
+  nz = (blocks[1].axis_size(0)-1)/2+1;
   
   
   for (int j = 1; j < cNy/2; j++) {
@@ -797,27 +801,27 @@ void ConjPlane::middle_even_equal(Integrator & integrator,int nx)
       
       integrator.integrate(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       
-      block3(block3.axis_size(0)-i,block3.axis_size(1)-j)
+      blocks[3](blocks[3].axis_size(0)-i,blocks[3].axis_size(1)-j)
 	= std::conj(integrator.ft_phi(i,j,nx));
     }
     
   }
   
   
-  MPI_Isend(block3.data(),block3.size()*2,MPI_DOUBLE,mpi_size-id-1,3,
+  MPI_Isend(blocks[3].data(),blocks[3].size()*2,MPI_DOUBLE,mpi_size-id-1,3,
 	    comm,&block_requests[3]);
   
   
   // receive from bottom left square, then fill in top right square
   
-  MPI_Recv(block1.data(), block1.size()*2,MPI_DOUBLE,mpi_size-id-1,1,
+  MPI_Recv(blocks[1].data(), blocks[1].size()*2,MPI_DOUBLE,mpi_size-id-1,1,
 	    comm,MPI_STATUS_IGNORE);
   
 
   for (int i = 1; i < cNz; i++) {
     for (int j = cNy/2+1; j < cNy; j++) {
       
-      integrator.ft_phi(i,j,nx) = block1(i-1,j-block1.axis_size(1));
+      integrator.ft_phi(i,j,nx) = blocks[1](i-1,j-blocks[1].axis_size(1));
       
     }
   }
@@ -853,7 +857,7 @@ void ConjPlane::lefthalf_unequal(Integrator & integrator,int nx)
   
   // bottom left plane square (1 <= y < Nz/2, 1 <= z < Ny/2)
   
-  for (int i = loopstart; i < block0.axis_size(0)+loopstart; i++) {
+  for (int i = loopstart; i < blocks[0].axis_size(0)+loopstart; i++) {
     
     for (int j = 1; j < cNy/2; j++) {
       
@@ -861,27 +865,27 @@ void ConjPlane::lefthalf_unequal(Integrator & integrator,int nx)
       integrator.integrate(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
 
-      block0(block0.axis_size(0)-i-(1-loopstart),block0.axis_size(1)-j) = std::conj(integrator.ft_phi(i,j,nx));
+      blocks[0](blocks[0].axis_size(0)-i-(1-loopstart),blocks[0].axis_size(1)-j) = std::conj(integrator.ft_phi(i,j,nx));
       
     }
 
   }
   
-  MPI_Isend(block0.data(),block0.size()*2,MPI_DOUBLE,mpi_size-id-1,0,
+  MPI_Isend(blocks[0].data(),blocks[0].size()*2,MPI_DOUBLE,mpi_size-id-1,0,
 	    comm,&block_requests[0]);
   
-  for (int i = block0.axis_size(0)+loopstart; i < cNz ; i++) {
+  for (int i = blocks[0].axis_size(0)+loopstart; i < cNz ; i++) {
     
     for (int j = 1; j < cNy/2; j++ ) {
       
       integrator.integrate(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
-      block1(block1.axis_size(0)-(i-block0.axis_size(0)+1-loopstart),block1.axis_size(1)-j)
+      blocks[1](blocks[1].axis_size(0)-(i-blocks[0].axis_size(0)+1-loopstart),blocks[1].axis_size(1)-j)
 	= std::conj(integrator.ft_phi(i,j,nx));
       
     }
   }
   
-  MPI_Isend(block1.data(),block1.size()*2,MPI_DOUBLE,mpi_size-id-2,1,
+  MPI_Isend(blocks[1].data(),blocks[1].size()*2,MPI_DOUBLE,mpi_size-id-2,1,
 	    comm,&block_requests[1]);
   
   
@@ -890,14 +894,14 @@ void ConjPlane::lefthalf_unequal(Integrator & integrator,int nx)
   // (1 <= y < Nz/2, Ny/2 < z < Ny)
   
   
-  MPI_Irecv(block2.data(), block2.size()*2,MPI_DOUBLE,mpi_size-id-1,2,
+  MPI_Irecv(blocks[2].data(), blocks[2].size()*2,MPI_DOUBLE,mpi_size-id-1,2,
 	    comm,&block_requests[2]);
   
-  MPI_Irecv(block3.data(), block3.size()*2,MPI_DOUBLE,mpi_size-id-2,3,
+  MPI_Irecv(blocks[3].data(), blocks[3].size()*2,MPI_DOUBLE,mpi_size-id-2,3,
 	    comm,&block_requests[3]);
   
   
-  // now fill phi with block3 and block4 received data in an efficient manner
+  // now fill phi with blocks[3] and block4 received data in an efficient manner
   
   int b2flag=0;
   int b3flag = 0;
@@ -911,30 +915,30 @@ void ConjPlane::lefthalf_unequal(Integrator & integrator,int nx)
   }
   
   
-  if (b2flag) { // if block2 is received first
-    for (int i = loopstart; i < block2.axis_size(0)+loopstart; i++) {
+  if (b2flag) { // if blocks[2] is received first
+    for (int i = loopstart; i < blocks[2].axis_size(0)+loopstart; i++) {
       for (int j = cNy/2+1; j < cNy; j++) {
 	
-	integrator.ft_phi(i,j,nx) = block2(i-loopstart,j-block2.axis_size(1));
+	integrator.ft_phi(i,j,nx) = blocks[2](i-loopstart,j-blocks[2].axis_size(1));
 	
       }
     }
     
     MPI_Wait(&block_requests[3],MPI_STATUS_IGNORE);
     
-    for (int i = block2.axis_size(0)+loopstart; i < cNz; i++) {
+    for (int i = blocks[2].axis_size(0)+loopstart; i < cNz; i++) {
       for (int j = cNy/2+1; j < cNy; j++) {
 	
-	integrator.ft_phi(i,j,nx) = block3(i-(block2.axis_size(0)+loopstart),j-block3.axis_size(1));
+	integrator.ft_phi(i,j,nx) = blocks[3](i-(blocks[2].axis_size(0)+loopstart),j-blocks[3].axis_size(1));
 	
       }
     }
-  } else if (b3flag) { // if block3 is received first
+  } else if (b3flag) { // if blocks[3] is received first
 
-    for (int i = block2.axis_size(0)+loopstart; i < cNz; i++) {
+    for (int i = blocks[2].axis_size(0)+loopstart; i < cNz; i++) {
       for (int j = cNy/2+1; j < cNy; j++) {
 	
-	integrator.ft_phi(i,j,nx) = block3(i-(block2.axis_size(0)+loopstart),j-block3.axis_size(1));
+	integrator.ft_phi(i,j,nx) = blocks[3](i-(blocks[2].axis_size(0)+loopstart),j-blocks[3].axis_size(1));
 	
       }
     }
@@ -942,10 +946,10 @@ void ConjPlane::lefthalf_unequal(Integrator & integrator,int nx)
     MPI_Wait(&block_requests[2],MPI_STATUS_IGNORE);
     
     
-    for (int i = loopstart; i < block2.axis_size(0)+loopstart; i++) {
+    for (int i = loopstart; i < blocks[2].axis_size(0)+loopstart; i++) {
       for (int j = cNy/2+1; j < cNy; j++) {
 	
-	integrator.ft_phi(i,j,nx) = block2(i-loopstart,j-block2.axis_size(1));
+	integrator.ft_phi(i,j,nx) = blocks[2](i-loopstart,j-blocks[2].axis_size(1));
 	
       }
     }      
@@ -969,7 +973,7 @@ void ConjPlane::righthalf_unequal(Integrator & integrator,int nx)
   
   // send from far right corner of bottom right square
   
-  for (int i = 0; i < block2.axis_size(0); i++) {
+  for (int i = 0; i < blocks[2].axis_size(0); i++) {
 
     for (int j = 1; j < cNy/2; j++) {
       
@@ -978,38 +982,38 @@ void ConjPlane::righthalf_unequal(Integrator & integrator,int nx)
       //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
       
       
-      block2(block2.axis_size(0)-i-1,block2.axis_size(1)-j) = std::conj(integrator.ft_phi(i,j,nx));
+      blocks[2](blocks[2].axis_size(0)-i-1,blocks[2].axis_size(1)-j) = std::conj(integrator.ft_phi(i,j,nx));
       
     }
   }
   
-  MPI_Isend(block2.data(),block2.size()*2,MPI_DOUBLE,mpi_size-id-1,2,
+  MPI_Isend(blocks[2].data(),blocks[2].size()*2,MPI_DOUBLE,mpi_size-id-1,2,
 	      comm,&block_requests[2]);
     
     
-  for (int i = block2.axis_size(0); i < cNz; i++) {
+  for (int i = blocks[2].axis_size(0); i < cNz; i++) {
     for (int j = 1; j < cNy/2; j++) {
       
       integrator.integrate(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       
-      block3(block3.axis_size(0)-(i-block2.axis_size(0)+1),block3.axis_size(1)-j)
+      blocks[3](blocks[3].axis_size(0)-(i-blocks[2].axis_size(0)+1),blocks[3].axis_size(1)-j)
 	= std::conj(integrator.ft_phi(i,j,nx));
     }
     
   }
   
   
-  MPI_Isend(block3.data(),block3.size()*2,MPI_DOUBLE,mpi_size-id-2,3,
+  MPI_Isend(blocks[3].data(),blocks[3].size()*2,MPI_DOUBLE,mpi_size-id-2,3,
 	    comm,&block_requests[3]);
   
   
   // receive both from bottom left square, then fill in top right square
   
-  MPI_Irecv(block0.data(), block0.size()*2,MPI_DOUBLE,mpi_size-id-1,0,
+  MPI_Irecv(blocks[0].data(), blocks[0].size()*2,MPI_DOUBLE,mpi_size-id-1,0,
 	    comm,&block_requests[0]);
   
   
-  MPI_Irecv(block1.data(), block1.size()*2,MPI_DOUBLE,mpi_size-id-2,1,
+  MPI_Irecv(blocks[1].data(), blocks[1].size()*2,MPI_DOUBLE,mpi_size-id-2,1,
 	    comm,&block_requests[1]);
   
   
@@ -1024,42 +1028,42 @@ void ConjPlane::righthalf_unequal(Integrator & integrator,int nx)
     MPI_Test(&block_requests[1],&b1flag,MPI_STATUS_IGNORE);
   }
   
-  if (b0flag) { // if block0 is received first
-    for (int i = 0; i < block0.axis_size(0); i++) {
+  if (b0flag) { // if blocks[0] is received first
+    for (int i = 0; i < blocks[0].axis_size(0); i++) {
       for (int j = cNy/2+1; j < cNy; j++) {
 	
-	integrator.ft_phi(i,j,nx) = block0(i,j-block0.axis_size(1));
+	integrator.ft_phi(i,j,nx) = blocks[0](i,j-blocks[0].axis_size(1));
 	
       }
     }
 
     MPI_Wait(&block_requests[1],MPI_STATUS_IGNORE);
     
-    for (int i = block0.axis_size(0); i < cNz; i++) {
+    for (int i = blocks[0].axis_size(0); i < cNz; i++) {
       for (int j = cNy/2+1; j < cNy; j++) {
 	
-	integrator.ft_phi(i,j,nx) = block1(i-block0.axis_size(0),j-block1.axis_size(1));
+	integrator.ft_phi(i,j,nx) = blocks[1](i-blocks[0].axis_size(0),j-blocks[1].axis_size(1));
 	
       }
     }
     
     
-  } else if (b1flag) { // if block1 is received first
+  } else if (b1flag) { // if blocks[1] is received first
     
-    for (int i = block0.axis_size(0); i < cNz; i++) {
+    for (int i = blocks[0].axis_size(0); i < cNz; i++) {
       for (int j = cNy/2+1; j < cNy; j++) {
 	
-	integrator.ft_phi(i,j,nx) = block1(i-block0.axis_size(0),j-block1.axis_size(1));
+	integrator.ft_phi(i,j,nx) = blocks[1](i-blocks[0].axis_size(0),j-blocks[1].axis_size(1));
 	
       }
     }
     
     MPI_Wait(&block_requests[0],MPI_STATUS_IGNORE);
     
-    for (int i = 0; i < block0.axis_size(0); i++) {
+    for (int i = 0; i < blocks[0].axis_size(0); i++) {
       for (int j = cNy/2+1; j < cNy; j++) {
 	
-	integrator.ft_phi(i,j,nx) = block0(i,j-block0.axis_size(1));
+	integrator.ft_phi(i,j,nx) = blocks[0](i,j-blocks[0].axis_size(1));
 	
       }
     }      
@@ -1082,13 +1086,13 @@ void ConjPlane::middle_odd_unequal(Integrator & integrator,int nx)
 
   
   // write bottom left square to top right square where possible
-  for (int i = 0; i < (block0.axis_size(0)-1)/2; i++) {
+  for (int i = 0; i < (blocks[0].axis_size(0)-1)/2; i++) {
 
     for (int j = 1; j < cNy/2; j++) {
       
       
       integrator.integrate(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
-      integrator.ft_phi(cNz-i-block1.axis_size(0)-1,cNy-j,nx) = std::conj(integrator.ft_phi(i,j,nx));
+      integrator.ft_phi(cNz-i-blocks[1].axis_size(0)-1,cNy-j,nx) = std::conj(integrator.ft_phi(i,j,nx));
       
     }
     /*
@@ -1097,21 +1101,21 @@ void ConjPlane::middle_odd_unequal(Integrator & integrator,int nx)
       
       // since conjugatation for top, change expression for ft_phi
       ft_phi(i,j,nx) = std::conj(integrator.integrate(nz,Ny-j,nx,ft_phi));//1.0*(Nz-i-complex_local)-1i*(1.0*(Ny-j));
-      ft_phi(cNz-i-block1.axis_size(0)-1,cNy-j,nx) = std::conj(ft_phi(i,j,nx));
+      ft_phi(cNz-i-blocks[1].axis_size(0)-1,cNy-j,nx) = std::conj(ft_phi(i,j,nx));
       
       }*/
   }
   // write bottom right square to top left square where possible
-  for (int i = (block0.axis_size(0)-1)/2 + 1; i < block0.axis_size(0); i++) {
+  for (int i = (blocks[0].axis_size(0)-1)/2 + 1; i < blocks[0].axis_size(0); i++) {
     for (int j = 1; j < cNy/2; j++ ) {
       integrator.integrate(i,j,nx);
-      integrator.ft_phi(cNz-i-block1.axis_size(0)-1,cNy-j,nx) = std::conj(integrator.ft_phi(i,j,nx));
+      integrator.ft_phi(cNz-i-blocks[1].axis_size(0)-1,cNy-j,nx) = std::conj(integrator.ft_phi(i,j,nx));
     }
   }
 
   
   // don't forget Nz/2 term!
-  int nz = (block0.axis_size(0)-1)/2;
+  int nz = (blocks[0].axis_size(0)-1)/2;
   
   
   for (int j = 1; j < cNy/2; j++) {
@@ -1123,28 +1127,28 @@ void ConjPlane::middle_odd_unequal(Integrator & integrator,int nx)
   
   
   // write to block and send to previous processor
-  for (int i = cNz-block3.axis_size(0); i < cNz; i++) {
+  for (int i = cNz-blocks[3].axis_size(0); i < cNz; i++) {
     
     for (int j = 1; j < cNy/2; j++) {
       
       integrator.integrate(i,j,nx);//1.0*(i+complex_local) + 1i*(1.0*j);
-      block3(cNz-i-1,block3.axis_size(1)-j) = std::conj(integrator.ft_phi(i,j,nx));
+      blocks[3](cNz-i-1,blocks[3].axis_size(1)-j) = std::conj(integrator.ft_phi(i,j,nx));
     }
     
   }
   
-  MPI_Isend(block3.data(),block3.size()*2,MPI_DOUBLE,mpi_size-id-2,3,
+  MPI_Isend(blocks[3].data(),blocks[3].size()*2,MPI_DOUBLE,mpi_size-id-2,3,
 	    comm,&block_requests[3]);
   
   
   // and receive extra data from the previous processor
-  MPI_Recv(block1.data(), block1.size()*2,MPI_DOUBLE,mpi_size-id-2,1,
+  MPI_Recv(blocks[1].data(), blocks[1].size()*2,MPI_DOUBLE,mpi_size-id-2,1,
 	   comm,MPI_STATUS_IGNORE);
   
-  for (int i = cNz-block1.axis_size(0); i < cNz; i++) {
+  for (int i = cNz-blocks[1].axis_size(0); i < cNz; i++) {
     
     for (int j = cNy/2+1; j < cNy; j++) {
-      integrator.ft_phi(i,j,nx) = block1(i-(cNz-block1.axis_size(0)),j-block1.axis_size(1));
+      integrator.ft_phi(i,j,nx) = blocks[1](i-(cNz-blocks[1].axis_size(0)),j-blocks[1].axis_size(1));
     }
   }
   
@@ -1168,7 +1172,7 @@ void ConjPlane::middle_even_unequal(Integrator & integrator,int nx)
 
   // write bottom left to next processor
 
-  for (int i = 0; i < block0.axis_size(0); i++) {
+  for (int i = 0; i < blocks[0].axis_size(0); i++) {
     
     for (int j = 1; j < cNy/2; j++) {
       
@@ -1176,36 +1180,36 @@ void ConjPlane::middle_even_unequal(Integrator & integrator,int nx)
       integrator.integrate(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
 
-      block0(block0.axis_size(0)-i-1,block0.axis_size(1)-j) = std::conj(integrator.ft_phi(i,j,nx));
+      blocks[0](blocks[0].axis_size(0)-i-1,blocks[0].axis_size(1)-j) = std::conj(integrator.ft_phi(i,j,nx));
       
     }
 
   }
 
-  MPI_Isend(block0.data(),block0.size()*2,MPI_DOUBLE,mpi_size-id-1,0,
+  MPI_Isend(blocks[0].data(),blocks[0].size()*2,MPI_DOUBLE,mpi_size-id-1,0,
 	    comm,&block_requests[0]);
 
   // write bottom left to top right in same processor where possible
-  for (int i = block0.axis_size(0); i < block0.axis_size(0)+(block1.axis_size(0)-1)/2; i++) {
+  for (int i = blocks[0].axis_size(0); i < blocks[0].axis_size(0)+(blocks[1].axis_size(0)-1)/2; i++) {
 
     for (int j = 1; j < cNy/2; j++) {
 
       integrator.integrate(i,j,nx);//1.0*(i+complex_local)+1i*(1.0*j);
-      integrator.ft_phi(cNz-(i-block0.axis_size(0))-1,cNy-j,nx) = std::conj(integrator.ft_phi(i,j,nx));
+      integrator.ft_phi(cNz-(i-blocks[0].axis_size(0))-1,cNy-j,nx) = std::conj(integrator.ft_phi(i,j,nx));
 
     }
   }
 
   // write bottom right to top left in the same processor where possible
-  for (int i = block0.axis_size(0)+(block1.axis_size(0)-1)/2+1; i < cNz; i++) {
+  for (int i = blocks[0].axis_size(0)+(blocks[1].axis_size(0)-1)/2+1; i < cNz; i++) {
     for (int j = 1; j < cNy/2; j++ ) {
       integrator.integrate(i,j,nx);
-      integrator.ft_phi(cNz-(i-block0.axis_size(0))-1,cNy-j,nx) = std::conj(integrator.ft_phi(i,j,nx));
+      integrator.ft_phi(cNz-(i-blocks[0].axis_size(0))-1,cNy-j,nx) = std::conj(integrator.ft_phi(i,j,nx));
     }
   }
   
   // don't forget Nz/2 term (on same processor again)!
-  int nz = block0.axis_size(0)+(block1.axis_size(0)-1)/2;
+  int nz = blocks[0].axis_size(0)+(blocks[1].axis_size(0)-1)/2;
   
   
   for (int j = 1; j < cNy/2; j++) {
@@ -1218,13 +1222,13 @@ void ConjPlane::middle_even_unequal(Integrator & integrator,int nx)
   
   
   // and receive extra data from the next processor to put in top 
-  MPI_Recv(block2.data(), block2.size()*2,MPI_DOUBLE,mpi_size-id-1,2,
+  MPI_Recv(blocks[2].data(), blocks[2].size()*2,MPI_DOUBLE,mpi_size-id-1,2,
 	   comm,MPI_STATUS_IGNORE);
   
-  for (int i = 0; i < block2.axis_size(0); i++) {
+  for (int i = 0; i < blocks[2].axis_size(0); i++) {
     
     for (int j = cNy/2+1; j < cNy; j++) {
-      integrator.ft_phi(i,j,nx) = block2(i,j-block2.axis_size(1));
+      integrator.ft_phi(i,j,nx) = blocks[2](i,j-blocks[2].axis_size(1));
       //      std::cout << "ft_phi(" << i+integrator.ft_phi.get_local0start() << "," << j
       //		<< ") = " << integrator.ft_phi(i,j,nx) << std::endl;
     }
@@ -1252,21 +1256,21 @@ void ConjPlane::line_lefthalf_equal(Integrator & integrator,int nx)
   integrator.integrate(nz,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
   //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
     
-  line0(0,0) = std::conj(integrator.ft_phi(nz,ny,nx));
+  lines[0](0,0) = std::conj(integrator.ft_phi(nz,ny,nx));
 
 
   
-  MPI_Isend(line0.data(),line0.size()*2,MPI_DOUBLE,mpi_size-id,0,
+  MPI_Isend(lines[0].data(),lines[0].size()*2,MPI_DOUBLE,mpi_size-id,0,
 	    comm,&line_requests[0]);
   
   for (int i = 1; i < cNz ; i++) {
     
     integrator.integrate(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
-    line1(line1.axis_size(0)-i,0)
+    lines[1](lines[1].axis_size(0)-i,0)
       = std::conj(integrator.ft_phi(i,ny,nx));
   }
   
-  MPI_Isend(line1.data(),line1.size()*2,MPI_DOUBLE,mpi_size-id-1,1,
+  MPI_Isend(lines[1].data(),lines[1].size()*2,MPI_DOUBLE,mpi_size-id-1,1,
 	    comm,&line_requests[1]);
   
   
@@ -1275,14 +1279,14 @@ void ConjPlane::line_lefthalf_equal(Integrator & integrator,int nx)
   // (1 <= y < Nz/2, Ny/2 < z < Ny)
   
   
-  MPI_Irecv(line2.data(), line2.size()*2,MPI_DOUBLE,mpi_size-id,2,
+  MPI_Irecv(lines[2].data(), lines[2].size()*2,MPI_DOUBLE,mpi_size-id,2,
 	    comm,&line_requests[2]);
   
-  MPI_Irecv(line3.data(), line3.size()*2,MPI_DOUBLE,mpi_size-id-1,3,
+  MPI_Irecv(lines[3].data(), lines[3].size()*2,MPI_DOUBLE,mpi_size-id-1,3,
 	    comm,&line_requests[3]);
   
 
-  // now fill phi with line3 and line4 received data in an efficient manner
+  // now fill phi with lines[3] and line4 received data in an efficient manner
   
   int b2flag=0;
   int b3flag = 0;
@@ -1296,28 +1300,28 @@ void ConjPlane::line_lefthalf_equal(Integrator & integrator,int nx)
   }
   
   
-  if (b2flag) { // if line2 is received first
+  if (b2flag) { // if lines[2] is received first
 
 	
-    integrator.ft_phi(nz,ny,nx) = line2(nz,0);
+    integrator.ft_phi(nz,ny,nx) = lines[2](nz,0);
 
     
     MPI_Wait(&line_requests[3],MPI_STATUS_IGNORE);
     
     for (int i = 1; i < cNz; i++) {
-	integrator.ft_phi(i,ny,nx) = line3(i-1,0);
+	integrator.ft_phi(i,ny,nx) = lines[3](i-1,0);
     }
 
-  } else if (b3flag) { // if line3 is received first
+  } else if (b3flag) { // if lines[3] is received first
 
     for (int i = 1; i < cNz; i++) {
-      integrator.ft_phi(i,ny,nx) = line3(i-1,0);
+      integrator.ft_phi(i,ny,nx) = lines[3](i-1,0);
     }
     
     MPI_Wait(&line_requests[2],MPI_STATUS_IGNORE);
 
       
-    integrator.ft_phi(nz,ny,nx) = line2(nz,0);
+    integrator.ft_phi(nz,ny,nx) = lines[2](nz,0);
   }
   
   MPI_Waitall(nreq-2,line_requests,MPI_STATUSES_IGNORE);    
@@ -1339,11 +1343,11 @@ void ConjPlane::line_righthalf_equal(Integrator & integrator,int nx)
   //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
     
     
-  line2(0,0) = std::conj(integrator.ft_phi(nz,ny,nx));
+  lines[2](0,0) = std::conj(integrator.ft_phi(nz,ny,nx));
 
 
 
-  MPI_Isend(line2.data(),line2.size()*2,MPI_DOUBLE,mpi_size-id,2,
+  MPI_Isend(lines[2].data(),lines[2].size()*2,MPI_DOUBLE,mpi_size-id,2,
 	      comm,&line_requests[2]);
     
     
@@ -1351,22 +1355,22 @@ void ConjPlane::line_righthalf_equal(Integrator & integrator,int nx)
     
     integrator.integrate(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       
-    line3(line3.axis_size(0)-i,0)
+    lines[3](lines[3].axis_size(0)-i,0)
       = std::conj(integrator.ft_phi(i,ny,nx));
   }
   
   
-  MPI_Isend(line3.data(),line3.size()*2,MPI_DOUBLE,mpi_size-id-1,3,
+  MPI_Isend(lines[3].data(),lines[3].size()*2,MPI_DOUBLE,mpi_size-id-1,3,
 	    comm,&line_requests[3]);
   
   
   // receive both from bottom left square, then fill in top right square
   
-  MPI_Irecv(line0.data(), line0.size()*2,MPI_DOUBLE,mpi_size-id,0,
+  MPI_Irecv(lines[0].data(), lines[0].size()*2,MPI_DOUBLE,mpi_size-id,0,
 	    comm,&line_requests[0]);
   
   
-  MPI_Irecv(line1.data(), line1.size()*2,MPI_DOUBLE,mpi_size-id-1,1,
+  MPI_Irecv(lines[1].data(), lines[1].size()*2,MPI_DOUBLE,mpi_size-id-1,1,
 	    comm,&line_requests[1]);
   
 
@@ -1383,22 +1387,22 @@ void ConjPlane::line_righthalf_equal(Integrator & integrator,int nx)
     MPI_Test(&line_requests[1],&b1flag,MPI_STATUS_IGNORE);
   }
   
-  if (b0flag) { // if line0 is received first
+  if (b0flag) { // if lines[0] is received first
     
-    integrator.ft_phi(nz,ny,nx) = line0(nz,0);
+    integrator.ft_phi(nz,ny,nx) = lines[0](nz,0);
     
     
     MPI_Wait(&line_requests[1],MPI_STATUS_IGNORE);
     
     for (int i = 1; i < cNz; i++) {
-      integrator.ft_phi(i,ny,nx) = line1(i-1,0);
+      integrator.ft_phi(i,ny,nx) = lines[1](i-1,0);
     }
     
     
-  } else if (b1flag) { // if line1 is received first
+  } else if (b1flag) { // if lines[1] is received first
     
     for (int i = 1; i < cNz; i++) {
-      integrator.ft_phi(i,ny,nx) = line1(i-1,ny);
+      integrator.ft_phi(i,ny,nx) = lines[1](i-1,ny);
     }
     
     MPI_Wait(&line_requests[0],MPI_STATUS_IGNORE);
@@ -1406,7 +1410,7 @@ void ConjPlane::line_righthalf_equal(Integrator & integrator,int nx)
 
 
       
-    integrator.ft_phi(nz,ny,nx) = line0(nz,0);
+    integrator.ft_phi(nz,ny,nx) = lines[0](nz,0);
   }
   
   MPI_Waitall(nreq-2,&line_requests[2],MPI_STATUSES_IGNORE);
@@ -1429,9 +1433,9 @@ void ConjPlane::line_middle_odd_equal(Integrator & integrator,int nx)
   integrator.integrate(nz,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
   //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
     
-  line0(nz,0) = std::conj(integrator.ft_phi(nz,ny,nx));
+  lines[0](nz,0) = std::conj(integrator.ft_phi(nz,ny,nx));
 
-  MPI_Isend(line0.data(),line0.size()*2,MPI_DOUBLE,mpi_size-id,0,
+  MPI_Isend(lines[0].data(),lines[0].size()*2,MPI_DOUBLE,mpi_size-id,0,
 	    comm,&line_requests[0]);
 
 
@@ -1439,16 +1443,16 @@ void ConjPlane::line_middle_odd_equal(Integrator & integrator,int nx)
 
 
   ny = cNy/2;
-  MPI_Recv(line2.data(), line2.size()*2,MPI_DOUBLE,mpi_size-id,2,
+  MPI_Recv(lines[2].data(), lines[2].size()*2,MPI_DOUBLE,mpi_size-id,2,
 	   comm,MPI_STATUS_IGNORE);
     
-  integrator.ft_phi(nz,ny,nx) = line2(nz,0);
+  integrator.ft_phi(nz,ny,nx) = lines[2](nz,0);
 
 
 
   ny = 0;
   // write bottom left square to bottom right square where possible
-  for (int i = 1; i < (line1.axis_size(0)-1)/2+1; i++) {
+  for (int i = 1; i < (lines[1].axis_size(0)-1)/2+1; i++) {
   
     integrator.integrate(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
     integrator.ft_phi(cNz-i,ny,nx) = std::conj(integrator.ft_phi(i,ny,nx));
@@ -1457,7 +1461,7 @@ void ConjPlane::line_middle_odd_equal(Integrator & integrator,int nx)
 
   ny = cNy/2;
   // write top right square to top left square where possible
-  for (int i = (line1.axis_size(0)-1)/2 + 2; i < cNz; i++) {
+  for (int i = (lines[1].axis_size(0)-1)/2 + 2; i < cNz; i++) {
 
     integrator.integrate(i,ny,nx);
     integrator.ft_phi(cNz-i,ny,nx) = std::conj(integrator.ft_phi(i,ny,nx));
@@ -1488,24 +1492,24 @@ void ConjPlane::line_middle_even_equal(Integrator & integrator,int nx)
   for (int i = 1; i < cNz; i++) {
     integrator.integrate(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       
-    line3(line3.axis_size(0)-i,0)
+    lines[3](lines[3].axis_size(0)-i,0)
 	= std::conj(integrator.ft_phi(i,ny,nx));
 
   }
   
   
-  MPI_Isend(line3.data(),line3.size()*2,MPI_DOUBLE,mpi_size-id-1,3,
+  MPI_Isend(lines[3].data(),lines[3].size()*2,MPI_DOUBLE,mpi_size-id-1,3,
 	    comm,&line_requests[3]);
   
   
   // receive from bottom left square, then fill in bottom right square
   
-  MPI_Recv(line1.data(), line1.size()*2,MPI_DOUBLE,mpi_size-id-1,1,
+  MPI_Recv(lines[1].data(), lines[1].size()*2,MPI_DOUBLE,mpi_size-id-1,1,
 	   comm,MPI_STATUS_IGNORE);
   
   ny = 0;
   for (int i = 1; i < cNz; i++) {
-    integrator.ft_phi(i,ny,nx) = line1(i-1,0);
+    integrator.ft_phi(i,ny,nx) = lines[1](i-1,0);
   }
     
   MPI_Wait(&line_requests[3],MPI_STATUS_IGNORE);
@@ -1525,26 +1529,26 @@ void ConjPlane::line_lefthalf_unequal(Integrator & integrator,int nx)
   
   // write and send bottom left line (1 <= y < Nz/2, z =0)
   
-  for (int i = loopstart; i < line0.axis_size(0)+loopstart; i++) {
+  for (int i = loopstart; i < lines[0].axis_size(0)+loopstart; i++) {
 
     integrator.integrate(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
     //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
 
-    line0(line0.axis_size(0)-i-(1-loopstart),0) = std::conj(integrator.ft_phi(i,ny,nx));
+    lines[0](lines[0].axis_size(0)-i-(1-loopstart),0) = std::conj(integrator.ft_phi(i,ny,nx));
       
   }
   
-  MPI_Isend(line0.data(),line0.size()*2,MPI_DOUBLE,mpi_size-id-1,0,
+  MPI_Isend(lines[0].data(),lines[0].size()*2,MPI_DOUBLE,mpi_size-id-1,0,
 	    comm,&line_requests[0]);
   
-  for (int i = line0.axis_size(0)+loopstart; i < cNz ; i++) {
+  for (int i = lines[0].axis_size(0)+loopstart; i < cNz ; i++) {
 
     integrator.integrate(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
-    line1(line1.axis_size(0)-(i-line0.axis_size(0)+1-loopstart),0)
+    lines[1](lines[1].axis_size(0)-(i-lines[0].axis_size(0)+1-loopstart),0)
       = std::conj(integrator.ft_phi(i,ny,nx));
   }
   
-  MPI_Isend(line1.data(),line1.size()*2,MPI_DOUBLE,mpi_size-id-2,1,
+  MPI_Isend(lines[1].data(),lines[1].size()*2,MPI_DOUBLE,mpi_size-id-2,1,
 	    comm,&line_requests[1]);
   
   
@@ -1555,14 +1559,14 @@ void ConjPlane::line_lefthalf_unequal(Integrator & integrator,int nx)
 
   ny = cNy/2;
   
-  MPI_Irecv(line2.data(), line2.size()*2,MPI_DOUBLE,mpi_size-id-1,2,
+  MPI_Irecv(lines[2].data(), lines[2].size()*2,MPI_DOUBLE,mpi_size-id-1,2,
 	    comm,&line_requests[2]);
   
-  MPI_Irecv(line3.data(), line3.size()*2,MPI_DOUBLE,mpi_size-id-2,3,
+  MPI_Irecv(lines[3].data(), lines[3].size()*2,MPI_DOUBLE,mpi_size-id-2,3,
 	    comm,&line_requests[3]);
   
   
-  // now fill phi with line3 and line4 received data in an efficient manner
+  // now fill phi with lines[3] and line4 received data in an efficient manner
   
   int b2flag=0;
   int b3flag = 0;
@@ -1576,29 +1580,29 @@ void ConjPlane::line_lefthalf_unequal(Integrator & integrator,int nx)
   }
   
   
-  if (b2flag) { // if line2 is received first
-    for (int i = loopstart; i < line2.axis_size(0)+loopstart; i++) {
-      integrator.ft_phi(i,ny,nx) = line2(i-loopstart,0);
+  if (b2flag) { // if lines[2] is received first
+    for (int i = loopstart; i < lines[2].axis_size(0)+loopstart; i++) {
+      integrator.ft_phi(i,ny,nx) = lines[2](i-loopstart,0);
       
     }
 
     
     MPI_Wait(&line_requests[3],MPI_STATUS_IGNORE);
     
-    for (int i = line2.axis_size(0)+loopstart; i < cNz; i++) {
-      integrator.ft_phi(i,ny,nx) = line3(i-(line2.axis_size(0)+loopstart),0);
+    for (int i = lines[2].axis_size(0)+loopstart; i < cNz; i++) {
+      integrator.ft_phi(i,ny,nx) = lines[3](i-(lines[2].axis_size(0)+loopstart),0);
     }
-  } else if (b3flag) { // if line3 is received first
+  } else if (b3flag) { // if lines[3] is received first
 
-    for (int i = line2.axis_size(0)+loopstart; i < cNz; i++) {
-	integrator.ft_phi(i,ny,nx) = line3(i-(line2.axis_size(0)+loopstart),0);
+    for (int i = lines[2].axis_size(0)+loopstart; i < cNz; i++) {
+	integrator.ft_phi(i,ny,nx) = lines[3](i-(lines[2].axis_size(0)+loopstart),0);
     }
     
     MPI_Wait(&line_requests[2],MPI_STATUS_IGNORE);
     
     
-    for (int i = loopstart; i < line2.axis_size(0)+loopstart; i++) {
-      integrator.ft_phi(i,ny,nx) = line2(i-loopstart,0);
+    for (int i = loopstart; i < lines[2].axis_size(0)+loopstart; i++) {
+      integrator.ft_phi(i,ny,nx) = lines[2](i-loopstart,0);
 	
     }
 
@@ -1619,27 +1623,27 @@ void ConjPlane::line_righthalf_unequal(Integrator & integrator,int nx)
   
   // write and send top right line (1 <= y < Nz/2, z = cNy/2)
   
-  for (int i = 0; i < line2.axis_size(0); i++) {
+  for (int i = 0; i < lines[2].axis_size(0); i++) {
     integrator.integrate(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
     //(ft_phi(i,j,nx) - mobility*q2*ft_nonlinear(i,j,nx)*dt + noise*dt )/(1+mobility*gamma*q2*q2);
 
-    line2(line2.axis_size(0)-i-1,0) = std::conj(integrator.ft_phi(i,ny,nx));
+    lines[2](lines[2].axis_size(0)-i-1,0) = std::conj(integrator.ft_phi(i,ny,nx));
     
   }
   
-  MPI_Isend(line2.data(),line2.size()*2,MPI_DOUBLE,mpi_size-id-1,2,
+  MPI_Isend(lines[2].data(),lines[2].size()*2,MPI_DOUBLE,mpi_size-id-1,2,
 	      comm,&line_requests[2]);
     
     
-  for (int i = line2.axis_size(0); i < cNz; i++) {
+  for (int i = lines[2].axis_size(0); i < cNz; i++) {
       
     integrator.integrate(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
       
-    line3(line3.axis_size(0)-(i-line2.axis_size(0)+1),0)
+    lines[3](lines[3].axis_size(0)-(i-lines[2].axis_size(0)+1),0)
       = std::conj(integrator.ft_phi(i,ny,nx));
   }
 
-  MPI_Isend(line3.data(),line3.size()*2,MPI_DOUBLE,mpi_size-id-2,3,
+  MPI_Isend(lines[3].data(),lines[3].size()*2,MPI_DOUBLE,mpi_size-id-2,3,
 	    comm,&line_requests[3]);
   
   
@@ -1648,11 +1652,11 @@ void ConjPlane::line_righthalf_unequal(Integrator & integrator,int nx)
 
   ny = 0;
   
-  MPI_Irecv(line0.data(), line0.size()*2,MPI_DOUBLE,mpi_size-id-1,0,
+  MPI_Irecv(lines[0].data(), lines[0].size()*2,MPI_DOUBLE,mpi_size-id-1,0,
 	    comm,&line_requests[0]);
   
   
-  MPI_Irecv(line1.data(), line1.size()*2,MPI_DOUBLE,mpi_size-id-2,1,
+  MPI_Irecv(lines[1].data(), lines[1].size()*2,MPI_DOUBLE,mpi_size-id-2,1,
 	    comm,&line_requests[1]);
   
   
@@ -1667,32 +1671,32 @@ void ConjPlane::line_righthalf_unequal(Integrator & integrator,int nx)
     MPI_Test(&line_requests[1],&b1flag,MPI_STATUS_IGNORE);
   }
   
-  if (b0flag) { // if line0 is received first
-    for (int i = 0; i < line0.axis_size(0); i++) {
-      integrator.ft_phi(i,ny,nx) = line0(i,0);
+  if (b0flag) { // if lines[0] is received first
+    for (int i = 0; i < lines[0].axis_size(0); i++) {
+      integrator.ft_phi(i,ny,nx) = lines[0](i,0);
 
     }
 
     MPI_Wait(&line_requests[1],MPI_STATUS_IGNORE);
     
-    for (int i = line0.axis_size(0); i < cNz; i++) {
+    for (int i = lines[0].axis_size(0); i < cNz; i++) {
 	
-      integrator.ft_phi(i,ny,nx) = line1(i-line0.axis_size(0),0);
+      integrator.ft_phi(i,ny,nx) = lines[1](i-lines[0].axis_size(0),0);
 
     }
     
     
-  } else if (b1flag) { // if line1 is received first
+  } else if (b1flag) { // if lines[1] is received first
     
-    for (int i = line0.axis_size(0); i < cNz; i++) {
-	integrator.ft_phi(i,ny,nx) = line1(i-line0.axis_size(0),0);
+    for (int i = lines[0].axis_size(0); i < cNz; i++) {
+	integrator.ft_phi(i,ny,nx) = lines[1](i-lines[0].axis_size(0),0);
 
     }
     
     MPI_Wait(&line_requests[0],MPI_STATUS_IGNORE);
     
-    for (int i = 0; i < line0.axis_size(0); i++) {
-      integrator.ft_phi(i,ny,nx) = line0(i,0);
+    for (int i = 0; i < lines[0].axis_size(0); i++) {
+      integrator.ft_phi(i,ny,nx) = lines[0](i,0);
 
     }      
     
@@ -1711,19 +1715,19 @@ void ConjPlane::line_middle_odd_unequal(Integrator & integrator,int nx)
   int ny = 0;
   
   // write bottom left square to bottom right square where possible
-  for (int i = 0; i < (line0.axis_size(0)-1)/2; i++) {
+  for (int i = 0; i < (lines[0].axis_size(0)-1)/2; i++) {
     
     integrator.integrate(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
-    integrator.ft_phi(cNz-i-line1.axis_size(0)-1,ny,nx) = std::conj(integrator.ft_phi(i,ny,nx));
+    integrator.ft_phi(cNz-i-lines[1].axis_size(0)-1,ny,nx) = std::conj(integrator.ft_phi(i,ny,nx));
       
   }
 
   // write top right square to top left square where possible
 
   ny = cNy/2;
-  for (int i = (line0.axis_size(0)-1)/2 + 1; i < line0.axis_size(0); i++) {
+  for (int i = (lines[0].axis_size(0)-1)/2 + 1; i < lines[0].axis_size(0); i++) {
     integrator.integrate(i,ny,nx);
-    integrator.ft_phi(cNz-i-line1.axis_size(0)-1,ny,nx) = std::conj(integrator.ft_phi(i,ny,nx));
+    integrator.ft_phi(cNz-i-lines[1].axis_size(0)-1,ny,nx) = std::conj(integrator.ft_phi(i,ny,nx));
   }
 
   
@@ -1731,22 +1735,22 @@ void ConjPlane::line_middle_odd_unequal(Integrator & integrator,int nx)
 
   ny = cNy/2;
   
-  for (int i = cNz-line3.axis_size(0); i < cNz; i++) {
+  for (int i = cNz-lines[3].axis_size(0); i < cNz; i++) {
     integrator.integrate(i,ny,nx);//1.0*(i+complex_local) + 1i*(1.0*j);
-    line3(cNz-i-1,0) = std::conj(integrator.ft_phi(i,ny,nx));
+    lines[3](cNz-i-1,0) = std::conj(integrator.ft_phi(i,ny,nx));
   }
   
-  MPI_Isend(line3.data(),line3.size()*2,MPI_DOUBLE,mpi_size-id-2,3,
+  MPI_Isend(lines[3].data(),lines[3].size()*2,MPI_DOUBLE,mpi_size-id-2,3,
 	    comm,&line_requests[3]);
   
   
   // and receive extra data from the previous processor
-  MPI_Recv(line1.data(), line1.size()*2,MPI_DOUBLE,mpi_size-id-2,1,
+  MPI_Recv(lines[1].data(), lines[1].size()*2,MPI_DOUBLE,mpi_size-id-2,1,
 	   comm,MPI_STATUS_IGNORE);
 
   ny = 0;
-  for (int i = cNz-line1.axis_size(0); i < cNz; i++) {
-    integrator.ft_phi(i,ny,nx) = line1(i-(cNz-line1.axis_size(0)),0);
+  for (int i = cNz-lines[1].axis_size(0); i < cNz; i++) {
+    integrator.ft_phi(i,ny,nx) = lines[1](i-(cNz-lines[1].axis_size(0)),0);
   }
   
   
@@ -1763,41 +1767,41 @@ void ConjPlane::line_middle_even_unequal(Integrator & integrator,int nx)
   int ny = 0;
 
   // write bottom left and send to next processor
-  for (int i = 0; i < line0.axis_size(0); i++) {
+  for (int i = 0; i < lines[0].axis_size(0); i++) {
       
     integrator.integrate(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
 
 
-    line0(line0.axis_size(0)-i-1,0) = std::conj(integrator.ft_phi(i,ny,nx));
+    lines[0](lines[0].axis_size(0)-i-1,0) = std::conj(integrator.ft_phi(i,ny,nx));
       
   }
 
   // 
 
-  MPI_Isend(line0.data(),line0.size()*2,MPI_DOUBLE,mpi_size-id-1,0,
+  MPI_Isend(lines[0].data(),lines[0].size()*2,MPI_DOUBLE,mpi_size-id-1,0,
 	    comm,&line_requests[0]);
 
   // write bottom left to bottom right in same processor where possible
-  for (int i = line0.axis_size(0); i < line0.axis_size(0)+(line1.axis_size(0)-1)/2; i++) {
+  for (int i = lines[0].axis_size(0); i < lines[0].axis_size(0)+(lines[1].axis_size(0)-1)/2; i++) {
     integrator.integrate(i,ny,nx);//1.0*(i+complex_local)+1i*(1.0*j);
-    integrator.ft_phi(cNz-(i-line0.axis_size(0))-1,ny,nx) = std::conj(integrator.ft_phi(i,ny,nx));
+    integrator.ft_phi(cNz-(i-lines[0].axis_size(0))-1,ny,nx) = std::conj(integrator.ft_phi(i,ny,nx));
   }
 
   ny = cNy/2;
   // write top right to top left in the same processor where possible
-  for (int i = line0.axis_size(0)+(line1.axis_size(0)-1)/2+1; i < cNz; i++) {
+  for (int i = lines[0].axis_size(0)+(lines[1].axis_size(0)-1)/2+1; i < cNz; i++) {
     integrator.integrate(i,ny,nx);
-    integrator.ft_phi(cNz-(i-line0.axis_size(0))-1,ny,nx) = std::conj(integrator.ft_phi(i,ny,nx));
+    integrator.ft_phi(cNz-(i-lines[0].axis_size(0))-1,ny,nx) = std::conj(integrator.ft_phi(i,ny,nx));
   }
 
   // and receive extra data from the next processor to put in left
 
   ny = cNy/2;
-  MPI_Recv(line2.data(), line2.size()*2,MPI_DOUBLE,mpi_size-id-1,2,
+  MPI_Recv(lines[2].data(), lines[2].size()*2,MPI_DOUBLE,mpi_size-id-1,2,
 	   comm,MPI_STATUS_IGNORE);
   
-  for (int i = 0; i < line2.axis_size(0); i++) {
-    integrator.ft_phi(i,ny,nx) = line2(i,0);
+  for (int i = 0; i < lines[2].axis_size(0); i++) {
+    integrator.ft_phi(i,ny,nx) = lines[2](i,0);
   }
 
   MPI_Wait(&line_requests[0],MPI_STATUS_IGNORE);

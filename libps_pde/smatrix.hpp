@@ -4,65 +4,89 @@
 #include <iostream>
 #include <vector>
 #include <string>
-
+#include <memory>
 
 namespace psPDE {
 template <typename T>
 class sMatrix
 {
-private:
-  T *arr;
-
-
-  bool allocd;
-  int _size;
-  int *_sizeax;
-  std::string array_name;
-  int spacer;
-
-  std::ostream& _write_ostream(std::ostream &out, std::vector<std::string> outer,
-			       std::vector<std::string> inner,std::string delim,
-			       std::string innerdelim) const;
-  
-  
 public:
 
-  sMatrix();
+  typedef T* iterator;
+  typedef const T* const_iterator;
+  typedef size_t size_type;
+  typedef T value_type;
+  
+  sMatrix() : _sizeax(2)
+  {
+    create();
+    _sizeax.at(0) = 0;
+    _sizeax.at(1) = 0;
+  };
+  explicit sMatrix(size_type Ny, size_type Nx, const T& t = T())
+    : _sizeax(2)
+  {
+    create(Nx*Ny,t);
+    _sizeax.at(0) = Ny;
+    _sizeax.at(1) = Nx;
+  }
+
+  sMatrix (const sMatrix & m)
+    : _sizeax(2)
+  { // copy constructor
+    
+    create(m.begin(), m.end());
+    _sizeax.at(0) = m.axis_size(0);
+    _sizeax.at(1) = m.axis_size(1);
+    
+  } 
+  sMatrix& operator= (const sMatrix &);
+  
+
+  size_type size() const { return limit - arr; }
+
+  
+  T& operator()(size_type i, size_type j) { return arr[i*_sizeax[1] + j]; }
+  const T& operator()(size_type i, size_type j) const { return arr[i*_sizeax[1] + j]; }
+
+  iterator begin() { return arr; }
+  const_iterator begin() const { return arr; }
 
 
-  sMatrix(const int Nx, const int Ny);
+  iterator end() { return limit; }
+  const_iterator end() const { return limit; }
 
-  ~sMatrix();
-
+  ~sMatrix() { uncreate(); };
+  
+  
   T* data() {
       return arr;
   };
 
-  int size() {
-    return _size;
-  };
-
-  void size(const int , const int);
+  void resize(size_type, size_type);
   
-  int axis_size(int i)
+  int axis_size(int i) const
   {
-    return _sizeax[i];
+    return _sizeax.at(i);
   }
 
   int size_including(int);
+
   
-    
-  T& operator()(int,int );
-  T operator()(int,int) const;
+private:
+  iterator arr;
+  iterator limit;
 
-  void copy(sMatrix &);
+  std::vector<size_type> _sizeax;
 
-  std::ostream& numpy_save(std::ostream & );
+  std::allocator<T> alloc;
   
-  template <typename T0>
-  friend std::ostream& operator<< (std::ostream& out,
-				   const sMatrix<T0> & in);
 
+  void create();
+  void create( size_type, const T&);
+  void create(const_iterator, const_iterator);
+
+  void uncreate();
 
 };
 
