@@ -4,16 +4,9 @@
 #include <chrono>
 #include <cstring>
 
-
-//#include "fftw_mpi_3darray.hpp"
-//#include "integrator.hpp"
-//#include "conjplane.hpp"
-//#include "randompll.hpp"
-//#include "griddata.hpp"
-//#include "iovtk.hpp"
 #include <fftw3-mpi.h>
+
 #include "solutionparams.hpp"
-//#include "timestep.hpp"
 #include "globalparams.hpp"
 #include "run.hpp"
 
@@ -38,7 +31,9 @@ int main(int argc, char **argv)
 
   fftw_mpi_init();
 
-  std::ifstream infile,nucfile;
+  std::ifstream infile;
+
+  std::string nucfilename;
 
   std::map<std::string,std::string> variables;
 
@@ -61,7 +56,7 @@ int main(int argc, char **argv)
 		  << std::endl;
 	return EXIT_FAILURE;
       }
-      nucfile.open(argv[iarg+1]);
+      nucfilename = argv[iarg+1];
       iarg += 2;
       
     } else if (strcmp(argv[iarg],"-var") == 0) {
@@ -120,32 +115,24 @@ int main(int argc, char **argv)
     solparams.printall();
   }
 
-  std::vector<std::vector<double>> X_is;
-  std::vector<double> nucmaxs;
-  std::vector<double> radii;
-  std::vector<double> viscosities;
-  
-  if (not nucfile.is_open() && not gp.read_flag && not gp.restart_flag) {
-    std::cerr << "Warning! No nucleation file specified, so no nucleation sites will be generated."
-	      << std::endl;
-  } else {
+  std::unique_ptr<psPDE::Atom> atoms = nullptr;
 
-    double X_x,X_y,X_z;
-    double nucmax,viscosity,radius;
-    while(nucfile >> X_x >> X_y >> X_z >> nucmax >> radius >> viscosity) {
-      X_is.push_back({X_x,X_y,X_z});
-      nucmaxs.push_back(nucmax);
-      radii.push_back(radius);
-      viscosities.push_back(viscosity);      
-    }
+  psPDE::ReadData readData(id,mpi_size,nucfilename);
 
+  if (readData.read_file(atoms,comm) != psPDE::ReadData::SUCCESS) {
+    if (id == 0)  std::cout << "bad input file." << std::endl;
+    MPI_Finalize();
+    return 1;
   }
+
+
+  
 
   std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();  
 
   if (simulation_type == "run") {
     std::cout << "Running simulation of solution." << std::endl;
-    run(gp,solparams,X_is,nucmaxs,radii,viscosities);
+    run(gp,solparams,atoms.get());
   }
 
   std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
@@ -161,5 +148,3 @@ int main(int argc, char **argv)
   
   return 0;
 }
-
-

@@ -11,7 +11,7 @@ using namespace psPDE;
 /* Simple function to write a vtk file with binary data. */
 void ioVTK::writeVTKImageData(std::string fname,
 			      const std::vector<ft_dub*> scalar_outputs,
-			      const GridData& grid)
+			      const std::array<double,3> &boxlo)
 /*============================================================================*/
 /*
   Write scalar image data to a vtk (and paraview) compatible file
@@ -40,9 +40,14 @@ void ioVTK::writeVTKImageData(std::string fname,
   const int zstart = scalar_outputs[0]->get_local0start();
 
   
-  const int Nz0 = scalar_outputs[0]->axis_size(0);
-  const int Ny0 = scalar_outputs[0]->axis_size(1);
-  const int Nx0 = scalar_outputs[0]->axis_size(2);
+  const int Nz0 = scalar_outputs[0]->Nz();
+  const int Ny0 = scalar_outputs[0]->Ny();
+  const int Nx0 = scalar_outputs[0]->Nx();
+
+
+  const double dz = scalar_outputs[0]->dx;
+  const double dy = scalar_outputs[0]->dx;
+  const double dx = scalar_outputs[0]->dx;
 
   
   unsigned int bytelength = Nx0*Ny0*Nz0*sizeof(double);
@@ -65,8 +70,8 @@ void ioVTK::writeVTKImageData(std::string fname,
 	 << " byte_order=\"LittleEndian\">" << std::endl
 	 << "<ImageData WholeExtent=\"0 " << Nx0-1 << " 0 "
 	 << Ny0-1 << " " << zstart <<  "  " << Nz0+zstart-1 << "\" "
-	 <<"Origin=\"" << grid.get_Ox() << " " << grid.get_Oy() << " " << grid.get_Oz() << " \" "
-	 << "Spacing=\"" << grid.get_dx() << " " << grid.get_dy() << " " << grid.get_dz() << " "
+	 <<"Origin=\"" << boxlo[0] << " " << boxlo[1] << " " << boxlo[2] << " \" "
+	 << "Spacing=\"" << dx << " " << dy << " " << dz << " "
 	 << "\">" << std::endl
 	 << "<Piece Extent=\"0 " << Nx0-1 << " 0 "
 	 << Ny0-1 << " " << zstart << " " << Nz0+zstart-1 << "\">" << std::endl
@@ -235,9 +240,9 @@ void ioVTK::readVTKImageData(std::vector<ft_dub*> scalar_outputs,
 
 {
   
-  const int Nz0 = scalar_outputs[0]->axis_size(0);
-  const int Ny0 = scalar_outputs[0]->axis_size(1);
-  const int Nx0 = scalar_outputs[0]->axis_size(2);
+  const int Nz0 = scalar_outputs[0]->Nz();
+  const int Ny0 = scalar_outputs[0]->Ny();
+  const int Nx0 = scalar_outputs[0]->Nx();
 
   
   unsigned int bytelength = Nx0*Ny0*Nz0*sizeof(double);

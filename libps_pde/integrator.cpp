@@ -3,21 +3,21 @@
 
 using namespace psPDE;
 
-Integrator::Integrator(MPI_Comm comm,const GridData& fourier, const int seed,
+Integrator::Integrator(MPI_Comm comm, const int seed,
+		       fftw_MPI_3Darray<std::complex<double>> & ft_phi_o,
+		       fftw_MPI_3Darray<std::complex<double>> & ft_nonlinear_o,
 		       const SolutionParams& solparams,const double dt)
   : 
   seed(seed),mobility(solparams.mobility),gamma(solparams.gamma),
   temp(solparams.temp),chi(solparams.chi), volFH(solparams.volFH),
   chi_LP(solparams.chi_LP),nucwidth(solparams.nucwidth),
-  normalization(1.0/(fourier.get_Nx()*fourier.get_Ny()*fourier.get_Nz())),
-  dt(dt),real_dist(-0.5,0.5),ft_phi(comm,"ft_phi",fourier),
-  ft_nonlinear(comm,"ft_nl",fourier)
+  normalization(1.0/(ft_phi_o.boxgrid[0]*ft_phi_o.boxgrid[1]*ft_phi_o.boxgrid[2])),
+  dt(dt),real_dist(-0.5,0.5),ft_phi(ft_phi_o),
+  ft_nonlinear(ft_nonlinear_o)
 {
 
   gen.seed(seed);
-  double invLcubed = fourier.get_dx()*fourier.get_dy()*fourier.get_dz()/(2*M_PI
-									 *2*M_PI
-									 *2*M_PI);
+  double invLcubed = ft_phi.dx*ft_phi.dy*ft_phi.dz/(2*M_PI*2*M_PI*2*M_PI);
 
   local0start = ft_phi.get_local0start();
   complexprefactor = sqrt(12*temp*mobility*invLcubed);
@@ -33,12 +33,12 @@ Integrator::~Integrator()
 }
 
 void Integrator::initialize(fftw_MPI_3Darray<double> & phi,
-			  const double initial_volfrac, const double variance)
+			    const double initial_volfrac, const double variance)
 {
   
-  for (int i = 0; i < phi.axis_size(0); i++) {
-    for (int j = 0; j < phi.axis_size(1); j++) {
-      for (int k = 0; k < phi.axis_size(2); k++) {
+  for (int i = 0; i < phi.Nz(); i++) {
+    for (int j = 0; j < phi.Ny(); j++) {
+      for (int k = 0; k < phi.Nx(); k++) {
 	phi(i,j,k) = initial_volfrac + variance*real_dist(gen);
       }
     }
@@ -55,16 +55,16 @@ std::vector<std::vector<double>> Integrator::nonlinear(fftw_MPI_3Darray<double>&
 {
 
 
-  double dx = phi.grid.get_dx();
-  double dy = phi.grid.get_dy();
-  double dz = phi.grid.get_dz();
-  double Ox = phi.grid.get_Ox();
-  double Oy = phi.grid.get_Oy();
-  double Oz = phi.grid.get_Oz();
+  double dx = phi.dx;
+  double dy = phi.dy;
+  double dz = phi.dz;
+  double Ox = domain.subboxlo[0];
+  double Oy = domain.subboxlo[1];
+  double Oz = domain.subboxlo[2];
 
-  double Lx = phi.grid.get_Lx();
-  double Ly = phi.grid.get_Ly();
-  double Lz = phi.grid.get_Lz();
+  double Lx = domain.period[0];
+  double Ly = domain.period[1];
+  double Lz = domain.period[2];
 
   double x,y,z;
   double philink;
@@ -87,23 +87,22 @@ std::vector<std::vector<double>> Integrator::nonlinear(fftw_MPI_3Darray<double>&
 
   //  std::vector<double> dlink(3);
   
-  for (int i = 0; i < nonlinear.axis_size(0); i++) {
-    z = dz*(i+  local0start) + Oz;
+  for (int i = 0; i < nonlinear.Nz(); i++) {
+    z = dz*i + Oz;
 
     
-    for (int j = 0; j < nonlinear.axis_size(1); j++) {
+    for (int j = 0; j < nonlinear.Ny(); j++) {
       
       y = dy*j + Oy;
 
       
-      for (int k = 0; k < nonlinear.axis_size(2); k++) {
+      for (int k = 0; k < nonlinear.Nx(); k++) {
 	x = dx*k + Ox;
 
 	philink = linker_phi(x,y,z,Lx,Ly,Lz,phi(i,j,k),dx,dy,dz,X_is,nucmaxs,dFdX_is,
 			     free_energy);
 	nonlinear(i,j,k) 
 	  = temp/volFH*(log(phi(i,j,k)/(1-phi(i,j,k)))+chi*(1-2*phi(i,j,k))+2*philink);
-	//= temp/volFH*chi*phi(i,j,k);
 
       }
     }
@@ -128,19 +127,19 @@ std::vector<std::vector<double>> Integrator::nonlinear(fftw_MPI_3Darray<double>&
 void Integrator::integrate(int i, int j, int k)
 {
 
-  if (i + local0start > ft_phi.grid.get_Nz()/2) {
-    qz = ft_phi.grid.get_dz()*(ft_phi.grid.get_Nz()- i - local0start);
+  if (i + local0start > ft_phi.boxgrid[2]/2) {
+    qz = ft_phi.dz*(ft_phi.boxgrid[2]- i - local0start);
   } else {
-    qz = ft_phi.grid.get_dz()*(i + local0start);
+    qz = ft_phi.dz*(i + local0start);
   }
 
-  if (j > ft_phi.grid.get_Ny()/2) {
-    qy = ft_phi.grid.get_dy()*(ft_phi.grid.get_Ny()-j);
+  if (j > ft_phi.boxgrid[1]/2) {
+    qy = ft_phi.dy*(ft_phi.boxgrid[1]-j);
   } else {
-    qy = ft_phi.grid.get_dy()*j;
+    qy = ft_phi.dy*j;
   }  
 
-  qx = ft_phi.grid.get_dx()*k;
+  qx = ft_phi.dx*k;
   q2 = qx*qx + qy*qy + qz*qz;
   noise.real(complexprefactor*sqrt(q2)*sqrtdt*real_dist(gen));
   noise.imag(complexprefactor*sqrt(q2)*sqrtdt*real_dist(gen));
@@ -156,19 +155,19 @@ void Integrator::integrate(int i, int j, int k)
 void Integrator::integrate_real(int i, int j, int k)
 {
 
-  if (i + local0start > ft_phi.grid.get_Nz()/2) {
-    qz = ft_phi.grid.get_dz()*(ft_phi.grid.get_Nz()- i - local0start);
+  if (i + local0start > ft_phi.boxgrid[2]/2) {
+    qz = ft_phi.dz*(ft_phi.boxgrid[2]- i - local0start);
   } else {
-    qz = ft_phi.grid.get_dz()*(i + local0start);
+    qz = ft_phi.dz*(i + local0start);
   }
 
-  if (j > ft_phi.grid.get_Ny()/2) {
-    qy = ft_phi.grid.get_dy()*(ft_phi.grid.get_Ny()-j);
+  if (j > ft_phi.boxgrid[1]/2) {
+    qy = ft_phi.dy*(ft_phi.boxgrid[1]-j);
   } else {
-    qy = ft_phi.grid.get_dy()*j;
+    qy = ft_phi.dy*j;
   }
   
-  qx = ft_phi.grid.get_dx()*k;
+  qx = ft_phi.dx*k;
   q2 = qx*qx + qy*qy + qz*qz;
   
   noise = realprefactor*sqrt(q2)*sqrtdt*real_dist(gen);

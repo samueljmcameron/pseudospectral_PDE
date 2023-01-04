@@ -16,17 +16,12 @@ GlobalParams::GlobalParams(const MPI_Comm comm, const int id, const int mpi_size
   starttime(0.0),X_i_noise(0),steps(100),seed(129480),dump_every(100),
   thermo_every(100),dt(1e-4),volFrac(-1),variance(-1),dump_file(""),
   thermo_file(""),comm(comm), id(id),mpi_size(mpi_size),
-  realspace(64,64,64,100.0,100.0,100.0),fourier(realspace)
+  domain(100.0,100.0,100.0,-50.0,-50.0,-50.0,id,mpi_size),
+  Nx(64),Ny(64),Nz(64)
 {
-
-
-  double Lx = realspace.get_Lx();
-  double Ly = realspace.get_Ly();
-  double Lz = realspace.get_Lz();
-
-  int Nx = realspace.get_Nx();
-  int Ny = realspace.get_Ny();
-  int Nz = realspace.get_Nz();
+  double Lx = domain.period[0];
+  double Ly = domain.period[1];
+  double Lz = domain.period[2];
 
   std::string line;  
   if (input) {
@@ -166,20 +161,13 @@ GlobalParams::GlobalParams(const MPI_Comm comm, const int id, const int mpi_size
     }
     
   }
-  
-  realspace = GridData(Nz,Ny,Nx,Lz,Ly,Lx);
-  fourier = realspace.fft_grid();
+
+  domain = Domain(Lx,Ly,Lz,-Lx/2,-Ly/2,-Lz/2,id,mpi_size);
+
 
 
   lastline = line;
 
-  // later might make it an option to have the fft not output the transposed input,
-  // but for now just set this flag to always being true
-  fft_is_transposed = true;
-
-  if (fft_is_transposed) {
-    fourier.transpose_yz();
-  }
 
   if (read_flag && restart_flag) 
     throw std::runtime_error("Cannot restart and read simultaneously (choose one).");
@@ -229,30 +217,14 @@ void GlobalParams::printall()
   std::cout << "seed: " << seed << "."
 	    << std::endl;
   
-  std::cout << "boxgrid: (" << realspace.get_Nx() << "," << realspace.get_Ny() << ","
-	    << realspace.get_Nz() << ")."
-	    << std::endl;
-  std::cout << "boxdims: (" << realspace.get_Lx() << ","
-	    << realspace.get_Ly() << ","  << realspace.get_Lz()
+  std::cout << "boxdims: (" << domain.period[0] << ","
+	    << domain.period[1] << ","  << domain.period[2]
 	    << ")."
 	    << std::endl;
 
-  std::cout << "boxorigin: (" << realspace.get_Ox() << ","
-	    << realspace.get_Oy() << ","  << realspace.get_Oz()
+  std::cout << "boxorigin: (" << domain.boxlo[0] << ","
+	    << domain.boxlo[1] << ","  << domain.boxlo[2]
 	    << "). "  << std::endl;
-
-  std::cout << "fouriergrid (just to confirm): (" << fourier.get_Nx() << "," << fourier.get_Ny()
-	    << "," << fourier.get_Nz() << ")."
-	    << std::endl;
-  std::cout << "fourierdims (just to confirm): (" << fourier.get_Lx() << ","
-	    << fourier.get_Ly() << ","  << fourier.get_Lz()
-	    << ")."
-	    << std::endl;
-
-  std::cout << "fourierorigin: (" << fourier.get_Ox() << ","
-	    << fourier.get_Oy() << ","  << fourier.get_Oz()
-	    << "). "  << std::endl;
-
 
   if (restart_flag) 
     std::cout << "Restarting from step " << startstep << " at time " << starttime

@@ -6,7 +6,7 @@
 #include "integrator.hpp"
 #include "conjplane.hpp"
 #include "randompll.hpp"
-#include "griddata.hpp"
+
 #include "iovtk.hpp"
 #include "timestep.hpp"
 #include "input.hpp"
@@ -28,58 +28,27 @@ void X_i_of_t(std::vector<double> & X_i,
 
 
 void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
-	 std::vector<std::vector<double>> & X_is,
-	 std::vector<double> & nucmaxs,
-	 std::vector<double> & radii, std::vector<double> & viscosities) {
-
-  
-  psPDE::fftw_MPI_3Darray<double> phi(gp.comm,"concentration",gp.realspace);
-  psPDE::fftw_MPI_3Darray<double> nonlinear(gp.comm,"chempotential",gp.realspace);
+	 psPDE::Atom *atoms) {
 
 
-  psPDE::RandomPll rpll(gp.comm,gp.id,gp.seed,gp.mpi_size);
-  
-  psPDE::Integrator integrator(gp.comm,gp.fourier,rpll.get_processor_seed(),solparams,gp.dt);
+  // construct all grid data necessary
+  psPDE::gridData grid(gp.comm,gp.Nx,gp.Ny,gp.Nz,gp.domain);
 
-  fftw_plan forward_phi, backward_phi;
-  fftw_plan forward_nonlinear, backward_nonlinear;
+  // set up inter-processor communication details
+  CommBrick commbrick(comm);
+  commbrick.setup(domain,Rcut);
 
-  // can use the global seed, as it is just used to generate seeds but not actually
-  //  used as a seed itself.
-  std::mt19937 dropgen(gp.seed);
-  std::uniform_real_distribution<double> real_dist(-0.5,0.5);
-  
-  forward_phi = fftw_mpi_plan_dft_r2c_3d(gp.realspace.get_Nz(),gp.realspace.get_Ny(),
-					 gp.realspace.get_Nx(),
-					 phi.data(),
-					 reinterpret_cast<fftw_complex*>
-					 (integrator.ft_phi.data()),
-					 gp.comm, FFTW_MPI_TRANSPOSED_OUT);
-  
-  backward_phi = fftw_mpi_plan_dft_c2r_3d(gp.realspace.get_Nz(),gp.realspace.get_Ny(),
-					  gp.realspace.get_Nx(),
-					  reinterpret_cast<fftw_complex*>
-					  (integrator.ft_phi.data()),
-					  phi.data(),gp.comm,FFTW_MPI_TRANSPOSED_IN);
+  LAMMPS::Neighbor neighbor;
 
-  forward_nonlinear = fftw_mpi_plan_dft_r2c_3d(gp.realspace.get_Nz(),gp.realspace.get_Ny(),
-					       gp.realspace.get_Nx(),
-					       nonlinear.data(),
-					       reinterpret_cast<fftw_complex*>
-					       (integrator.ft_nonlinear.data()),
-					       gp.comm, FFTW_MPI_TRANSPOSED_OUT);
-  
-  backward_nonlinear = fftw_mpi_plan_dft_c2r_3d(gp.realspace.get_Nz(),gp.realspace.get_Ny(),
-						gp.realspace.get_Nx(),
-						reinterpret_cast<fftw_complex*>
-						(integrator.ft_nonlinear.data()),
-						nonlinear.data(),gp.comm,
-						FFTW_MPI_TRANSPOSED_IN);
+  neighbor.setup(domain,Rcut,skin);
   
 
-  
-  std::vector<std::vector<double>> free_energy_derivs;
 
+  domain.pbc(*atoms);
+  commbrick.borders(*atoms);
+
+
+  neighbor.neigh_bin->bin_atoms(*atoms,0);
   
   double t = gp.starttime;
 
@@ -94,10 +63,6 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
   std::string complexfname_p = complexprefix + std::string("_") +  std::to_string(gp.startstep) +  std::string(".vti");
 
   std::string complexcollection_name = complexprefix + std::string(".pvd");
-  
-  psPDE::fftw_MPI_3Darray<double> modulus(gp.comm,integrator.ft_phi.get_name()+std::string("_mod"),
-					  gp.fourier.get_positiveNx_grid());
-
 
   
   int running_average_count = 0;
@@ -126,9 +91,9 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
     
     psPDE::ioVTK::readVTKImageData({&phi},fname_p);
     
-    for (int i = 0; i < integrator.ft_phi.axis_size(0); i++) {
-      for (int j = 0; j < integrator.ft_phi.axis_size(1); j++) {
-	for (int k = 0; k < integrator.ft_phi.axis_size(2); k++) {
+    for (int i = 0; i < modulus.Nz(); i++) {
+      for (int j = 0; j < modulus.Ny(); j++) {
+	for (int k = 0; k < modulus.Nx(); k++) {
 	  modulus(i,j,k) = 0.0;
 	}
       }
@@ -161,19 +126,26 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
     }
 
     fftw_execute(forward_phi);
-    integrator.ft_phi.mod(modulus);
+    ft_phi.mod(modulus);
 
-    double norm = 1.0/(integrator.ft_phi.grid.get_Nx()*integrator.ft_phi.grid.get_Ny()
-		       *integrator.ft_phi.grid.get_Nz());
+    double norm = 1.0/(gp.Nz*gp.Ny*gp.Nx);
     
-    for (int i = 0; i < integrator.ft_phi.axis_size(0); i++) {
-      for (int j = 0; j < integrator.ft_phi.axis_size(1); j++) {
-	for (int k = 0; k < integrator.ft_phi.axis_size(2); k++) {
-	  integrator.ft_phi(i,j,k) = integrator.ft_phi(i,j,k)*norm;
+    for (int i = 0; i < ft_phi.Nz(); i++) {
+      for (int j = 0; j < ft_phi.Ny(); j++) {
+	for (int k = 0; k < ft_phi.Nx(); k++) {
+	  ft_phi(i,j,k) = ft_phi(i,j,k)*norm;
+	}
+      }
+    }
+    for (int i = 0; i < modulus.Nz(); i++) {
+      for (int j = 0; j < modulus.Ny(); j++) {
+	for (int k = 0; k < modulus.Nx(); k++) {
 	  modulus(i,j,k) = modulus(i,j,k)*norm;
 	}
       }
     }
+
+    
     if (gp.id == 0) {
       modulus(0,0,0) = 0.0;
     }
@@ -216,31 +188,28 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
     
   }
 
+  // class to get seeds from a single seed
+  psPDE::RandomPll rpll(gp.comm,gp.id,gp.seed,gp.mpi_size);
+  
+  psPDE::Integrator integrator(grid,rpll.get_processor_seed(),solparams,gp.dt);
 
+  // can use the global seed, as it is just used to generate seeds but not actually
+  //  used as a seed itself.
+  std::mt19937 dropgen(gp.seed);
+  std::uniform_real_distribution<double> real_dist(-0.5,0.5);
+  std::vector<std::vector<double>> free_energy_derivs;
 
-  using Clock = std::chrono::steady_clock;
-  using namespace std::literals;
-  auto constexpr chronoitvl = 1.0s/60.0;
-  using duration = std::chrono::duration<double>;
-  using time_point = std::chrono::time_point<Clock,duration>;
-
-  duration tt_integral = 0s;
-
-  duration tt_freeenergy = 0s;
 
   
-  psPDE::TimeStep timestep(gp.comm,gp.mpi_size,gp.id,integrator.ft_phi.axis_size(0),
-		    integrator.ft_phi.axis_size(1));
+  psPDE::TimeStep timestep(gp.comm,gp.mpi_size,gp.id,ft_phi.Nz(),
+			   ft_phi.Ny());
 
   double free_energy;
   for (int it = 1+gp.startstep; it <= gp.steps+gp.startstep; it ++) {
 
 
-    auto current_time = Clock::now();
 
     free_energy_derivs = integrator.nonlinear(nonlinear,phi,X_is,nucmaxs,free_energy); // compute nl(t) given phi(t)
-
-    tt_freeenergy += Clock::now() - current_time;
 
     if (gp.id == 0 && it % gp.thermo_every == 0) {
       myfile << t;
@@ -279,12 +248,10 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
     fftw_execute(forward_phi);
     fftw_execute(forward_nonlinear);
 
-    current_time = Clock::now();
     timestep.update(t,integrator);
-    tt_integral = Clock::now() - current_time;
 
     
-    integrator.ft_phi.running_mod(modulus);
+    ft_phi.running_mod(modulus);
     running_average_count += 1;
 
 
@@ -325,10 +292,6 @@ void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
       fftw_execute(backward_phi); // get phi(t+dt)
     }
 
-    //    link.wrap_X_i(X_i,phi.grid.get_Lx(),phi.grid.get_Ly(),phi.grid.get_Lz());
-    //    free_energy_derivative
-    //      = link.free_energy_derivative(X_i,integrator.linker_phi,
-    //				    integrator.linker_derivative,phi);
 
 
   }

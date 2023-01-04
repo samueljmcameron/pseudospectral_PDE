@@ -10,7 +10,7 @@ target_include_directories(ps_pde PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(ps_pde PUBLIC MPI::MPI_CXX PkgConfig::FFTW ${FFTW_MPI_LIB})
 
 
-set_target_properties(ps_pde PROPERTIES PUBLIC_HEADER "conjplane.hpp;fftw_mpi_3darray.hpp;globalparams.hpp;griddata.hpp;input.hpp;integrator.hpp;iovtk.hpp;randompll.hpp;smatrix.hpp;solutionparams.hpp;timestep.hpp")
+set_target_properties(ps_pde PROPERTIES PUBLIC_HEADER "conjplane.hpp;fftw_mpi_3darray.hpp;globalparams.hpp;domain.hpp;input.hpp;integrator.hpp;iovtk.hpp;randompll.hpp;smatrix.hpp;solutionparams.hpp;timestep.hpp")
 
 
 include(GNUInstallDirs)

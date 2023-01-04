@@ -8,7 +8,8 @@
 #include <vector>
 
 #include "input.hpp"
-#include "griddata.hpp"
+#include "domain.hpp"
+
 namespace psPDE {
 class GlobalParams {
 private:
@@ -34,10 +35,9 @@ public:
   const MPI_Comm comm;
   const int id, mpi_size;
 
-  GridData realspace;
-  GridData fourier;
-  
+  int Nx,Ny,Nz;
 
+  Domain domain,ft_domain;
 
   void printall();
 

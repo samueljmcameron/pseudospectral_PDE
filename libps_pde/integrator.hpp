@@ -40,14 +40,16 @@ private:
   
   void ode(std::complex<double> &, std::complex<double>,
 	   std::complex<double>, double);
+
+  fftw_MPI_3Darray<std::complex<double>> &ft_phi;
+  fftw_MPI_3Darray<std::complex<double>> &ft_nonlinear;
+
   
 public:
 
   Integrator(MPI_Comm,const GridData&,const int,
 	     const SolutionParams&,const double);
   ~Integrator();
-  fftw_MPI_3Darray<std::complex<double>> ft_phi;
-  fftw_MPI_3Darray<std::complex<double>> ft_nonlinear;
 
 
   void initialize(fftw_MPI_3Darray<double> &,
