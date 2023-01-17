@@ -11,6 +11,7 @@
 #include "run.hpp"
 
 #include "grid.hpp"
+#include "domain.hpp"
 #include "conjugate_volfrac.hpp"
 #include "fixgrid_floryhuggins.hpp"
 
@@ -78,7 +79,7 @@ int main(int argc, char **argv)
 
 
   std::string line;
-  std::vector<std::string> domain_line;
+  std::vector<std::string> v_line;
 
   while (std::getline(infile,line)) {
     
@@ -86,23 +87,23 @@ int main(int argc, char **argv)
 
     input::convertVariables(line,variables);
 
-    domain_line = input::split_line(line);
+    v_line = input::split_line(line);
 
 
-    if (domain_line[0] != "domain") {
+    if (v_line[0] != "domain") {
       std::cerr << "error, first line of input file needs to start with domain."
 		<< std::endl;
       MPI_Abort(comm,1);
       return EXIT_FAILURE;
     }
 
-    domain_line.erase(domain_line.begin());
+    v_line.erase(v_line.begin());
 
     break;
     
   }
 
-  std::vector<std::string> v_line;
+  psPDE::Domain domain(id,mpi_size,v_line);
   
   while (std::getline(infile,line)) {
 
@@ -128,7 +129,7 @@ int main(int argc, char **argv)
 
   // need to wrap grid in braces to get 
   {
-    psPDE::Grid grid(v_line,domain_line,id,mpi_size,comm);
+    psPDE::Grid grid(v_line,comm);
   
     while (std::getline(infile,line)) {
       
@@ -156,7 +157,7 @@ int main(int argc, char **argv)
 
     grid.populate(v_line);
 
-    psPDE::ConjugateVolFrac conjvfrac(&grid);
+    psPDE::ConjugateVolFrac conjvfrac(domain,grid);
 
     while (std::getline(infile,line)) {
       
@@ -285,7 +286,7 @@ int main(int argc, char **argv)
 
     std::cout << "Running simulation of solution." << std::endl;
     
-    run(grid,conjvfrac,fxgridFH,dt,Nsteps);
+    run(domain,grid,conjvfrac,fxgridFH,dt,Nsteps);
     
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     std::cout << "Run time = "

@@ -7,18 +7,18 @@
 
 using namespace psPDE;
 
-ConjugateVolFrac::ConjugateVolFrac(Grid *grid)
-  : Conjugate(grid),ft_phi(*(grid->ft_phi)),
-    ft_nonlinear(*(grid->ft_nonlinear)),real_dist(-0.5,0.5)
+ConjugateVolFrac::ConjugateVolFrac(Domain &domain_o,Grid &grid_o)
+  : Conjugate(domain_o,grid_o),ft_phi(*(grid.ft_phi)),
+    ft_nonlinear(*(grid.ft_nonlinear)),real_dist(-0.5,0.5)
 {
 
-  if (!grid->ft_phi || !grid->ft_nonlinear)
+  if (!grid.ft_phi || !grid.ft_nonlinear)
     throw std::runtime_error("Calling conjugate/volfrac on grid that "
 			     "doesn't have concentration grid_style.");
 
   
   seed_flag = false;
-  ft_array = grid->ft_phi.get();
+  ft_array = grid.ft_phi.get();
   
   setup();
   
@@ -75,9 +75,9 @@ void ConjugateVolFrac::readCoeffs(const std::vector<std::string> &v_line)
 void ConjugateVolFrac::reset_dt(double timestep)
 {
   dt = timestep;
-  double invLcubed = 1.0/(grid->domain.period[0]*grid->domain.period[1]*grid->domain.period[2]);
+  double invLcubed = 1.0/(domain.period[0]*domain.period[1]*domain.period[2]);
 
-  normalization = 1.0/(grid->ft_boxgrid[0]*grid->ft_boxgrid[1]*grid->ft_boxgrid[2]);
+  normalization = 1.0/(grid.ft_boxgrid[0]*grid.ft_boxgrid[1]*grid.ft_boxgrid[2]);
 
 
 
@@ -99,7 +99,7 @@ void ConjugateVolFrac::complex_update(int i , int j, int k)
   
   qz = qzs[i];
   qy = qys[j];
-  qx = grid->dqx()*k;
+  qx = domain.dqx()*k;
 
   q2 = qx*qx + qy*qy + qz*qz;
 
@@ -127,7 +127,7 @@ void ConjugateVolFrac::real_update(int i, int j, int k)
 
   qz = qzs[i];
   qy = qys[j];
-  qx = grid->dqx()*k;
+  qx = domain.dqx()*k;
   
   q2 = qx*qx + qy*qy + qz*qz;
 

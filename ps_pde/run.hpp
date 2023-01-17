@@ -3,11 +3,12 @@
 
 #include <vector>
 
+#include "domain.hpp"
 #include "grid.hpp"
 #include "conjugate_volfrac.hpp"
 #include "fixgrid_floryhuggins.hpp"
 
-void run(psPDE::Grid &,psPDE::ConjugateVolFrac &,
+void run(psPDE::Domain &, psPDE::Grid &,psPDE::ConjugateVolFrac &,
 	 psPDE::FixGridFloryHuggins &, double, int );
 
 #endif

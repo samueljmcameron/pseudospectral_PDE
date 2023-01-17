@@ -12,9 +12,9 @@
 namespace psPDE {
 class Conjugate
 {
-
+  
 public:
- Conjugate(Grid *);
+  Conjugate(Domain &, Grid &);
 
 
   virtual void reset_dt(double);
@@ -24,12 +24,26 @@ public:
   virtual void readCoeffs(const std::vector<std::string> &) = 0;
 
 
+private:
+  
+  const int nblocks;
+
 protected:
   
   const MPI_Comm comm;
   const int id, mpi_size;
-  const int nblocks;
+  
+  Domain &domain;
+  Grid &grid;
+  fftw_MPI_3Darray<std::complex<double>> *ft_array;
 
+  
+  double complexprefactor, realprefactor, sqrtdt;
+  
+
+  std::vector<double> qys,qzs;
+
+  
   double dt;
   
   int localNy,localNz;
@@ -97,18 +111,6 @@ protected:
   void line_middle_even_unequal(int);
 
   
-protected:
-
-
-  Grid *grid;
-  fftw_MPI_3Darray<std::complex<double>> *ft_array;
-
-  
-  double complexprefactor, realprefactor, sqrtdt;
-  
-
-  std::vector<double> qys,qzs;
-
 
   
   

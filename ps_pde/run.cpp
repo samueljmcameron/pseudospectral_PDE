@@ -4,27 +4,30 @@
 #include "input.hpp"
 #include "run.hpp"
 
-void run(psPDE::Grid &grid,psPDE::ConjugateVolFrac &conjvfrac,
+void run(psPDE::Domain &domain,psPDE::Grid &grid,psPDE::ConjugateVolFrac &conjvfrac,
 	 psPDE::FixGridFloryHuggins &fxgridFH, double dt, int Nsteps)
 {
 
   
   double t = 0;
   int step = 0;
-  
+
+  double dx = domain.period[0]/grid.boxgrid[0];
+  double dy = domain.period[1]/grid.boxgrid[1];
+  double dz = domain.period[2]/grid.boxgrid[2];
 
   std::string prefix = "vtkfiles/start200000_nucd_p%";
 
-  input::replacePercentages(prefix,grid.domain.me);
+  input::replacePercentages(prefix,domain.me);
 
   std::string fname = prefix + std::string("_") + std::to_string(0) + std::string(".vti");
   std::string cname = prefix + std::string(".pvd");
 
-  if (grid.domain.me == 0)
+  if (domain.me == 0)
     std::cout << "Saving on step : 0" << std::endl;
   psPDE::ioVTK::writeVTKcollectionHeader(cname);
-  psPDE::ioVTK::writeVTKImageData(fname,{grid.phi.get()},grid.domain.boxlo,
-				  {grid.dx(),grid.dy(),grid.dz()});
+  psPDE::ioVTK::writeVTKImageData(fname,{grid.phi.get()},domain.boxlo,
+				  {dx,dy,dz});
 
   psPDE::ioVTK::writeVTKcollectionMiddle(cname,fname,t);
 
@@ -70,14 +73,14 @@ void run(psPDE::Grid &grid,psPDE::ConjugateVolFrac &conjvfrac,
 
     if (step % 1000 == 0) {
 
-      if (grid.domain.me == 0)
+      if (domain.me == 0)
 	std::cout << "Saving on step : " << step << std::endl;
 
       
       std::string fname = prefix + std::string("_") + std::to_string(step)
 	+ std::string(".vti");
-      psPDE::ioVTK::writeVTKImageData(fname,{grid.phi.get()},grid.domain.boxlo,
-				      {grid.dx(),grid.dy(),grid.dz()});
+      psPDE::ioVTK::writeVTKImageData(fname,{grid.phi.get()},domain.boxlo,
+				      {dx,dy,dz});
       
       psPDE::ioVTK::writeVTKcollectionMiddle(cname,fname,t);
 

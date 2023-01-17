@@ -1,9 +1,9 @@
 #include "conjugate.hpp"
 
 using namespace psPDE;
-Conjugate::Conjugate(Grid *grid)
-  : comm(grid->comm),id(grid->domain.me),mpi_size(grid->domain.nprocs),
-    nblocks(4),grid(grid),ft_array(nullptr)
+Conjugate::Conjugate(Domain &domain_o, Grid &grid_o)
+  : comm(grid_o.comm),id(domain_o.me),mpi_size(domain_o.nprocs),
+    nblocks(4),domain(domain_o),grid(grid_o),ft_array(nullptr)
 {
   
 
@@ -129,11 +129,11 @@ void Conjugate::set_qs()
 
   const int local0start = ft_array->get_local0start();
 
-  const int globalNy = grid->ft_boxgrid[1];
-  const int globalNz = grid->ft_boxgrid[2];
+  const int globalNy = grid.ft_boxgrid[1];
+  const int globalNz = grid.ft_boxgrid[2];
 
-  const double dy = grid->dqy();
-  const double dz = grid->dqz();
+  const double dy = domain.dqy();
+  const double dz = domain.dqz();
   
   qys.resize(localNy);
   qzs.resize(localNz);
@@ -162,9 +162,9 @@ void Conjugate::update()
   const int localNx = ft_array->Nx();  
   const int local0start = ft_array->get_local0start();
   
-  const int globalNx = grid->ft_boxgrid[0];
-  const int globalNy = grid->ft_boxgrid[1];
-  const int globalNz = grid->ft_boxgrid[2];
+  const int globalNx = grid.ft_boxgrid[0];
+  const int globalNy = grid.ft_boxgrid[1];
+  const int globalNz = grid.ft_boxgrid[2];
   
   
   

@@ -13,13 +13,11 @@ class Grid {
 public:
 
   
-  Grid(const std::vector<std::string> &,const std::vector<std::string> &,
-       int, int,MPI_Comm );
+  Grid(const std::vector<std::string> &,MPI_Comm );
 
   ~Grid();
 
 
-  Domain domain;
   std::array<ptrdiff_t,3> boxgrid; // global number of grid points {Nx,Ny,Nz}
   std::array<ptrdiff_t,3> ft_boxgrid; // global number of grid points {Nx,Ny,Nz}
   
@@ -40,18 +38,6 @@ public:
   fftw_plan forward_phi, backward_phi;
   fftw_plan forward_nonlinear, backward_nonlinear;
   
-  // grid spacings
-  
-  double dx() { return domain.period[0]/boxgrid[0];};
-  double dy() { return domain.period[1]/boxgrid[1];};
-  double dz() { return domain.period[2]/boxgrid[2];};
-
-  // fourier grid spacings
-  
-  double dqx() { return 2*3.141592/domain.period[0];};
-  double dqy() { return 2*3.141592/domain.period[2];};  
-  double dqz() { return 2*3.141592/domain.period[1];};
-
   
   
   void populate(const std::vector<std::string> &);

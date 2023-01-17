@@ -8,10 +8,8 @@
 using namespace psPDE;
 
 
-Grid::Grid(const std::vector<std::string> &v_line,
-	   const std::vector<std::string> & domainline,
-	   int id, int mpi_size,MPI_Comm comm)
-  : domain(id,mpi_size,domainline),comm(comm),phi(nullptr),nonlinear(nullptr),
+Grid::Grid(const std::vector<std::string> &v_line,MPI_Comm comm)
+  : comm(comm),phi(nullptr),nonlinear(nullptr),
     ft_phi(nullptr),ft_nonlinear(nullptr),ft_noise(nullptr)
     
 {
@@ -41,7 +39,6 @@ Grid::Grid(const std::vector<std::string> &v_line,
 
     } else if (v_line[iarg] == "concentration") {
       create_concentration(Nx,Ny,Nz);
-      set_real_subdomain();
       iarg += 1;
     } else if (v_line[iarg] == "noise") {
       create_noise(Nx,Ny,Nz);      
@@ -201,22 +198,6 @@ void Grid::constant_noise(double average, double variance, int seed)
 	(*ft_noise)(i,j,k).imag(variance*real_dist(gen));
       }
   
-  return;
-}
-
-void Grid::set_real_subdomain() 
-{
-
-  if (phi) {
-    domain.sublo[0] = domain.boxlo[0];
-    domain.sublo[1] = domain.boxlo[1];
-    domain.sublo[2] = dz()*phi->get_local0start() + domain.boxlo[2];
-    
-    domain.subhi[0] = domain.boxhi[0];
-    domain.subhi[1] = domain.boxhi[1];
-    domain.subhi[2] = dz()*(phi->get_local0start()+phi->Nz()) + domain.boxlo[2];
-  } else
-    throw std::runtime_error("Cannot create subdomains (incompatible grid style).");
   return;
 }
 

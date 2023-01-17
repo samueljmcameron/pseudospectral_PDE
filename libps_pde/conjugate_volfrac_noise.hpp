@@ -10,7 +10,7 @@ namespace psPDE {
 
 class ConjugateVolFracNoise : public Conjugate {
 public:
-  ConjugateVolFracNoise(Grid *);
+  ConjugateVolFracNoise(Domain &,Grid &);
   
 private:
 

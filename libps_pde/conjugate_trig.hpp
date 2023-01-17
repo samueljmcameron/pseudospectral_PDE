@@ -8,7 +8,7 @@ namespace psPDE {
 
 class ConjugateTrig : public Conjugate {
 public:
-  ConjugateTrig(Grid *);
+  ConjugateTrig(Domain &,Grid &);
 
   double x0,y0,z0;
   

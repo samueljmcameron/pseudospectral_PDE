@@ -6,6 +6,7 @@
 #include <string>
 
 namespace psPDE {
+class Grid;
 class Domain
 {
 public:
@@ -15,6 +16,16 @@ public:
   const int me,nprocs;
   std::array<double,3> period,boxlo,boxhi;
   std::array<double,3> sublo,subhi;
+
+
+  void partition(const Grid *);
+
+
+  double dqx() { return 2*3.141592/period[0];};
+  double dqy() { return 2*3.141592/period[2];};  
+  double dqz() { return 2*3.141592/period[1];};
+
+  
   
 private:
 

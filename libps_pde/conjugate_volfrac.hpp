@@ -14,7 +14,7 @@ namespace psPDE {
 
 class ConjugateVolFrac : public Conjugate {
 public:
-  ConjugateVolFrac(Grid *);
+  ConjugateVolFrac(Domain &, Grid &);
 
   virtual void readCoeffs(const std::vector<std::string> &) override;
   

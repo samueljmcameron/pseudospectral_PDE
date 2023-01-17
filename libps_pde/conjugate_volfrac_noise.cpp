@@ -9,15 +9,15 @@
 
 using namespace psPDE;
 
-ConjugateVolFracNoise::ConjugateVolFracNoise(Grid *grid)
-  : Conjugate(grid)
+ConjugateVolFracNoise::ConjugateVolFracNoise(Domain & domain, Grid &grid)
+  : Conjugate(domain,grid)
 {
 
-  if (!grid->ft_noise)
+  if (!grid.ft_noise)
     throw std::runtime_error("Calling conjugate/volfrac/noise on grid that "
 			     "doesn't have noise grid_style.");
   
-  ft_array = grid->ft_noise.get();
+  ft_array = grid.ft_noise.get();
   
   complexprefactor = 1.0;
   realprefactor = sqrt(2)*complexprefactor;
@@ -34,7 +34,7 @@ void ConjugateVolFracNoise::complex_update(int i , int j, int k)
   double qx,qy,qz,q2;
   qz = qzs[i];
   qy = qys[j];
-  qx = grid->dqx()*k;
+  qx = domain.dqx()*k;
 
   q2 = qx*qx + qy*qy + qz*qz;
   (*ft_array)(i,j,k).real(complexprefactor*sqrt(q2)*sqrtdt);// *real_dist(gen));
@@ -51,7 +51,7 @@ void ConjugateVolFracNoise::real_update(int i, int j, int k)
   double qx,qy,qz,q2;
   qz = qzs[i];
   qy = qys[j];
-  qx = grid->dqx()*k;
+  qx = domain.dqx()*k;
 
   q2 = qx*qx + qy*qy + qz*qz;
   (*ft_array)(i,j,k) = realprefactor*sqrt(q2)*sqrtdt;// *real_dist(gen);
