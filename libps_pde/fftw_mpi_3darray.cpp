@@ -5,11 +5,9 @@ using namespace psPDE;
 
 
 template <typename T>
-fftw_MPI_3Darray<T>::fftw_MPI_3Darray(const MPI_Comm &comm,std::string name,
-				      ptrdiff_t iNx, ptrdiff_t iNy, ptrdiff_t iNz,
-				      Domain & domain)
-  : comm(comm),boxgrid{iNx,iNy, iNz},dx(domain.period[0]/iNx),
-    dy(domain.period[1]/iNy),dz(domain.period[2]/iNz)
+fftw_MPI_3Darray<T>::fftw_MPI_3Darray(MPI_Comm comm,std::string name,
+				      ptrdiff_t iNx, ptrdiff_t iNy, ptrdiff_t iNz)
+  : comm(comm)
 /*
   Constructor for a 3D array with axis sizes (iNz,iNy,iNx) (the x dimension
   varies the quickest). The array is not contiguous in memory for different
@@ -21,9 +19,6 @@ fftw_MPI_3Darray<T>::fftw_MPI_3Darray(const MPI_Comm &comm,std::string name,
       Typically MPI_COMM_WORLD, but could be other I suppose.
   name : string
       The name of the array (useful when needing to save data).
-  domain : Domain
-      domain.sublo and domain.subhi WILL be modified by this function call to set
-      local values of processor dimensions
       
       
 */
@@ -56,8 +51,6 @@ fftw_MPI_3Darray<T>::fftw_MPI_3Darray(const MPI_Comm &comm,std::string name,
 			     "or std::complex<double>.");
   
   array_name = name;
-
-  set_subdomain(domain);
   
 };
 
@@ -67,9 +60,8 @@ fftw_MPI_3Darray<T>::fftw_MPI_3Darray(const MPI_Comm &comm,std::string name,
 template <typename T>
 fftw_MPI_3Darray<T>::fftw_MPI_3Darray(const fftw_MPI_3Darray<T> & base,
 				      std::string name)
-  : boxgrid(base.boxgrid),alloc_local(base.alloc_local),local_0_start(base.local_0_start),
-    size(base.size),array_name(base.array_name), spacer(base.spacer),comm(base.comm),
-    dx(base.dx),dy(base.dy),dz(base.dz)
+  : alloc_local(base.alloc_local),local_0_start(base.local_0_start),
+    size(base.size),array_name(base.array_name), spacer(base.spacer),comm(base.comm)
 /*
   Copy array, but if name (other than "") is provided then only make an
   array of the same size with the new name, but don't copy the elements in the
@@ -115,101 +107,9 @@ fftw_MPI_3Darray<T>::fftw_MPI_3Darray(const fftw_MPI_3Darray<T> & base,
 }
 
 
-template <typename T>
-fftw_MPI_3Darray<std::complex<double>>
-fftw_MPI_3Darray<T>::make_fourier_transpose(Domain & ft_domain) const
-/*
-    
-  Make an appropriately sized and domain'd fourier array from a double.
-
-  Parameters
-  ----------
-  ft_domain : Domain
-      The domain structure to use for dx, dy, dz, etc.
-
-      
-*/
-
-
-{
-
-  if (typeid(T) != typeid(double)) 
-    throw std::runtime_error("must generate fourier transposed fftw array "
-			     "from a fftw double array.");
-
-  
-  int iNx = boxgrid[0];
-  int iNy = boxgrid[2];
-  int iNz = boxgrid[1];
-
-  std::string ft_name = std::string("ft_") + array_name;
-
-
-  return fftw_MPI_3Darray<std::complex<double>>(comm,ft_name,iNx,iNy,iNz,ft_domain);
-
-  
-}
-
-
-template <typename T>
-fftw_MPI_3Darray<double>
-fftw_MPI_3Darray<T>::make_fourier_mod(Domain & ft_domain_mod) const
-/*
-    
-  Make an appropriately sized and domain'd absolute value of
-  fourier array from a double.
-
-
-  Parameters
-  ----------
-  ft_domain : Domain
-      The domain structure to use for dx, dy, dz, etc.
-
-      
-*/
-
-
-{
-
-  if (typeid(T) != typeid(std::complex<double>)) 
-    throw std::runtime_error("must generate fourier modulus fftw array "
-			     "from a fftw std::complex<double> array.");
-
-  
-  int iNx = boxgrid[0];
-  int iNy = boxgrid[1];
-  int iNz = boxgrid[2];
-  
-
-
-  std::string ft_name = array_name + std::string("_mod");
-
-
-  return fftw_MPI_3Darray<double>(comm,ft_name,iNx,iNy,iNz,ft_domain_mod);
-
-  
-}
 
 
 
-
-
-
-
-template <typename T>
-void fftw_MPI_3Darray<T>::set_subdomain(Domain &domain) const
-{
-
-  domain.sublo[0] = domain.boxlo[0];
-  domain.sublo[1] = domain.boxlo[1];
-  domain.sublo[2] = dz*local_0_start + domain.boxlo[2];
-
-  domain.subhi[0] = domain.boxhi[0];
-  domain.subhi[1] = domain.boxhi[1];
-  domain.subhi[2] = dz*(local_0_start+sizeax[0]) + domain.boxlo[2];
-  
-  return;
-}
 
 
 
@@ -361,6 +261,15 @@ void fftw_MPI_3Darray<T>::running_mod(fftw_MPI_3Darray<double>& modulus) const
 
 }
 
+template <typename T>
+void fftw_MPI_3Darray<T>::reverseFlat(int gridindex, int &i, int &j, int &k) const
+{
+
+  k = gridindex % sizeax[2];
+  j = (gridindex / sizeax[2]) % sizeax[1];
+  i = (gridindex / sizeax[2]) / sizeax[1];
+
+}
 
 
 template <typename T>

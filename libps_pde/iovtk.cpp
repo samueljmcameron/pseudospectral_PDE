@@ -11,7 +11,8 @@ using namespace psPDE;
 /* Simple function to write a vtk file with binary data. */
 void ioVTK::writeVTKImageData(std::string fname,
 			      const std::vector<ft_dub*> scalar_outputs,
-			      const std::array<double,3> &boxlo)
+			      const std::array<double,3> &boxlo,
+			      const std::array<double,3> &dx_vec)
 /*============================================================================*/
 /*
   Write scalar image data to a vtk (and paraview) compatible file
@@ -45,16 +46,16 @@ void ioVTK::writeVTKImageData(std::string fname,
   const int Nx0 = scalar_outputs[0]->Nx();
 
 
-  const double dz = scalar_outputs[0]->dx;
-  const double dy = scalar_outputs[0]->dx;
-  const double dx = scalar_outputs[0]->dx;
+  const double dz = dx_vec[0];
+  const double dy = dx_vec[1];
+  const double dx = dx_vec[2];
 
   
   unsigned int bytelength = Nx0*Ny0*Nz0*sizeof(double);
   
   for (const auto &elem : scalar_outputs)
-    if ( elem->axis_size(0) != Nz0 || elem->axis_size(1) != Ny0
-	 || elem->axis_size(2) != Nx0)
+    if ( elem->Nz() != Nz0 || elem->Ny() != Ny0
+	 || elem->Nx() != Nx0)
       throw std::runtime_error("All scalars must be on same grid.");
   
   
@@ -251,8 +252,8 @@ void ioVTK::readVTKImageData(std::vector<ft_dub*> scalar_outputs,
 
   
   for (const auto &elem : scalar_outputs)
-    if ( elem->axis_size(0) != Nz0 || elem->axis_size(1) != Ny0
-	 || elem->axis_size(2) != Nx0)
+    if ( elem->Nz() != Nz0 || elem->Ny() != Ny0
+	 || elem->Nx() != Nx0)
       throw std::runtime_error("All scalars must be on same grid.");
   
 
@@ -303,7 +304,7 @@ void ioVTK::writeVTK_P_ImageData(std::string fname,
 
 
   const int globalNz = scalar_outputs[0]->get_globalNz();
-  const int Nz0 = scalar_outputs[0]->axis_size(0);
+  const int Nz0 = scalar_outputs[0]->Nz();
   const int Ny0 = scalar_outputs[0]->axis_size(1);
   const int Nx0 = scalar_outputs[0]->axis_size(2);
   
@@ -312,7 +313,7 @@ void ioVTK::writeVTK_P_ImageData(std::string fname,
 
   
   for (const auto &elem : scalar_outputs)
-    if ( elem->axis_size(0) != Nz0 || elem->axis_size(1) != Ny0
+    if ( elem->Nz() != Nz0 || elem->axis_size(1) != Ny0
 	 || elem->axis_size(2) != Nx0)
       throw std::runtime_error("All scalars must be on same grid.");
   

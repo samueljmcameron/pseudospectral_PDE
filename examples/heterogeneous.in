@@ -1,31 +1,19 @@
 # set global parameters
 
 
-# can either use grid_setup to read in old data or create new grid data
-grid_setup boxgrid 64 64 64 boxdims 100.0 100.0 100.0 volFrac 0.2 0.03
-# OR
-#grid_setup read vtkfiles/nucd_p%_1000.vti
+domain boxdims 100.0 100.0 100.0 boxorigin -50.0 -50.0 -50.0
 
+grid_style 64 64 64 concentration
 
-# can only use atom_setup to read in old data for now, but could add options later
-atom_setup read vtkfiles/atom_p%_1000.vtp
-# OR
-#atom_setup npolymers 10 initialise
+# can either use grid_setup to read in old data or create new grid data	
+grid_populate constant concentration 0.2 0.2 349810
+# or
+#grid_populate read concentration vtkfiles/read_nucd_p%_100000.vti
 
-grid_dump    vtkfiles/nucd_p%_*.vti 1000
-atom_dump    vtkfiles/atom_p%_*.vtp 1000
+conjugate volfrac mobility 0.01 temp 1.0 volFH 0.01 gamma 10.0 seed 491240
 
-thermo       thermo/nucd_free_energy.txt 1000
-
-
-seed         8915820
-
-
-chemical_potential flory_huggins/nucd cutoff 1.0 mobility 0.01 volFH 0.01 gamma 10.0 chi 3.0 temp 1.0 chi_LP 1.0 chi_LL 1.0
-
-pair lj/cut cutoff 1.12246 epsilon 1.0
+fixgrid floryhuggins temp 1.0 chi 3.0 volFH 0.01
 
 dt	     1e-3
 
-run 20000
-
+run 100000

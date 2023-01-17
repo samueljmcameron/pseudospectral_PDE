@@ -3,12 +3,16 @@
 #include <complex>
 #include <chrono>
 #include <cstring>
+#include <fstream>
 
 #include <fftw3-mpi.h>
 
-#include "solutionparams.hpp"
-#include "globalparams.hpp"
+#include "input.hpp"
 #include "run.hpp"
+
+#include "grid.hpp"
+#include "conjugate_volfrac.hpp"
+#include "fixgrid_floryhuggins.hpp"
 
 int main(int argc, char **argv)
 {
@@ -50,15 +54,6 @@ int main(int argc, char **argv)
       infile.open(argv[iarg+1]);
       iarg += 2;
       
-    } else if (strcmp(argv[iarg],"-nuc") == 0) {
-      if (iarg+1 == argc) {
-	std::cerr << "Error: input flag '-nuc' specified, but no file given."
-		  << std::endl;
-	return EXIT_FAILURE;
-      }
-      nucfilename = argv[iarg+1];
-      iarg += 2;
-      
     } else if (strcmp(argv[iarg],"-var") == 0) {
       
       if (iarg + 2 >= argc) {
@@ -83,63 +78,224 @@ int main(int argc, char **argv)
 
 
   std::string line;
-  std::vector<std::string> splitvec;
+  std::vector<std::string> domain_line;
+
+  while (std::getline(infile,line)) {
     
-  psPDE::GlobalParams gp(comm,id,mpi_size,infile,variables,line);
+    if (line == "" || line[0] == '#') continue;
+
+    input::convertVariables(line,variables);
+
+    domain_line = input::split_line(line);
 
 
+    if (domain_line[0] != "domain") {
+      std::cerr << "error, first line of input file needs to start with domain."
+		<< std::endl;
+      MPI_Abort(comm,1);
+      return EXIT_FAILURE;
+    }
 
-  line = line.substr(0,line.find_first_of("#"));
-  splitvec = psPDE::input::split_line(line);
-  
+    domain_line.erase(domain_line.begin());
 
-  while (std::getline(infile,line) &&
-	 splitvec[0] != "build_solution") {
-
-    line = line.substr(0,line.find_first_of("#"));
-    splitvec = psPDE::input::split_line(line);
+    break;
     
   }
 
-  splitvec.erase(splitvec.begin());
-
-  for (auto &c : splitvec)
-    psPDE::input::convertVariable(c,variables);
+  std::vector<std::string> v_line;
   
-  
-  psPDE::SolutionParams solparams(splitvec);
+  while (std::getline(infile,line)) {
 
+    if (line == "" || line[0] == '#') continue;
 
-  if (id == 0) {
-    gp.printall();
-    solparams.printall();
+    input::convertVariables(line,variables);
+    
+    v_line = input::split_line(line);
+    
+    if (v_line[0] != "grid_style") {
+      std::cerr << "error, second line of input file needs to start with grid_style."
+		<< std::endl;
+      MPI_Abort(comm,1);
+      return EXIT_FAILURE;
+    }
+
+    v_line.erase(v_line.begin());
+
+    break;
+    
   }
 
-  std::unique_ptr<psPDE::Atom> atoms = nullptr;
 
-  psPDE::ReadData readData(id,mpi_size,nucfilename);
-
-  if (readData.read_file(atoms,comm) != psPDE::ReadData::SUCCESS) {
-    if (id == 0)  std::cout << "bad input file." << std::endl;
-    MPI_Finalize();
-    return 1;
-  }
-
-
+  // need to wrap grid in braces to get 
+  {
+    psPDE::Grid grid(v_line,domain_line,id,mpi_size,comm);
   
+    while (std::getline(infile,line)) {
+      
+      if (line == "" || line[0] == '#') continue;
+      
+      input::convertVariables(line,variables);
 
-  std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();  
+      input::replacePercentages(line,id);
+    
+      v_line = input::split_line(line);
+      
+      
+      if (v_line[0] != "grid_populate") {
+	std::cerr << "error, third line of input file needs to start with grid_populate."
+		  << std::endl;
+	MPI_Abort(comm,1);
+	return EXIT_FAILURE;
+      }
+      
+      v_line.erase(v_line.begin());
+      
+      break;
+      
+    }
 
-  if (simulation_type == "run") {
+    grid.populate(v_line);
+
+    psPDE::ConjugateVolFrac conjvfrac(&grid);
+
+    while (std::getline(infile,line)) {
+      
+      if (line == "" || line[0] == '#') continue;
+
+      input::convertVariables(line,variables);
+
+      v_line = input::split_line(line);
+
+      if (v_line[0] != "conjugate") {
+	std::cerr << "error, fourth line of input file needs to start with conjugate."
+		  << std::endl;
+	MPI_Abort(comm,1);
+	return EXIT_FAILURE;
+      }
+      v_line.erase(v_line.begin());
+
+      if (v_line[0] != "volfrac") {
+	std::cerr << "error, fourth line of input file needs to start with conjugate volfrac."
+		  << std::endl;
+	MPI_Abort(comm,1);
+	return EXIT_FAILURE;
+      }
+      v_line.erase(v_line.begin());
+
+      break;
+    }
+
+    conjvfrac.readCoeffs(v_line);
+
+    psPDE::FixGridFloryHuggins fxgridFH;
+
+    while (std::getline(infile,line)) {
+      
+      if (line == "" || line[0] == '#') continue;
+
+      input::convertVariables(line,variables);
+
+      v_line = input::split_line(line);
+
+      if (v_line[0] != "fixgrid") {
+	std::cerr << "error, fifth line of input file needs to start with fixgrid."
+		  << std::endl;
+	MPI_Abort(comm,1);
+	return EXIT_FAILURE;
+      }
+
+      if (v_line[0] != "fixgrid") {
+	std::cerr << "error, fifth line of input file needs to start with fixgrid."
+		  << std::endl;
+	MPI_Abort(comm,1);
+	return EXIT_FAILURE;
+      }
+      v_line.erase(v_line.begin());
+
+      if (v_line[0] != "floryhuggins") {
+	std::cerr << "error, fifth line of input file needs to start with fixgrid floryhuggins."
+		  << std::endl;
+	MPI_Abort(comm,1);
+	return EXIT_FAILURE;
+      }
+      v_line.erase(v_line.begin());
+
+      break;
+      
+    }
+
+    fxgridFH.readCoeffs(v_line);
+
+
+    double dt;
+    while (std::getline(infile,line)) {
+      
+      if (line == "" || line[0] == '#') continue;
+
+      input::convertVariables(line,variables);
+
+      v_line = input::split_line(line);
+
+      if (v_line[0] != "dt") {
+
+	std::cerr << "error, sixth line of input file needs to start with dt."
+		  << std::endl;
+	MPI_Abort(comm,1);
+	return EXIT_FAILURE;
+      }
+      v_line.erase(v_line.begin());
+
+      dt = std::stod(v_line[0]);
+      
+      break;
+    }
+
+
+    conjvfrac.reset_dt(dt);
+
+    int Nsteps;
+
+    while (std::getline(infile,line)) {
+      
+      if (line == "" || line[0] == '#') continue;
+
+      input::convertVariables(line,variables);
+
+      v_line = input::split_line(line);
+
+      if (v_line[0] != "run") {    
+
+	std::cerr << "error, sixth line of input file needs to start with dt."
+		  << std::endl;
+	MPI_Abort(comm,1);
+	return EXIT_FAILURE;
+
+      }
+
+      v_line.erase(v_line.begin());
+
+      Nsteps = std::stoi(v_line[0]);
+
+      break;
+
+    }
+
+
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();  
+
     std::cout << "Running simulation of solution." << std::endl;
-    run(gp,solparams,atoms.get());
+    
+    run(grid,conjvfrac,fxgridFH,dt,Nsteps);
+    
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    std::cout << "Run time = "
+	      << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()/1e6
+	      << "seconds." << std::endl;  
+
+    
+
+    
   }
-
-  std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-  std::cout << "Run time = "
-	    << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()/1e6
-	    << "seconds." << std::endl;  
-
 
 
   fftw_mpi_cleanup();

@@ -1,12 +1,29 @@
 #include "conjugate.hpp"
 
 using namespace psPDE;
-Conjugate::Conjugate(const MPI_Comm comm,const int mpi_size, const int id,
-		     fftw_MPI_3Darray<std::complex<double>> * ft_tomod)
-  : comm(comm),id(id),mpi_size(mpi_size),nblocks(4), ft_array(ft_tomod),
-    localNy(ft_tomod->Ny()), localNz(ft_tomod->Nz())
-
+Conjugate::Conjugate(Grid *grid)
+  : comm(grid->comm),id(grid->domain.me),mpi_size(grid->domain.nprocs),
+    nblocks(4),grid(grid),ft_array(nullptr)
 {
+  
+
+}
+
+
+void Conjugate::reset_dt(double timestep) {
+
+  dt = timestep;
+  return;
+}
+
+
+void Conjugate::setup()
+{
+
+  localNy = ft_array->Ny();
+  localNz = ft_array->Nz();
+  
+  
   
   std::vector<int> localNzs(mpi_size);
   
@@ -24,28 +41,6 @@ Conjugate::Conjugate(const MPI_Comm comm,const int mpi_size, const int id,
 
   set_qs();
 
-  for (int proc = 0; proc < mpi_size; proc++) {
-    if (proc == id) {
-      
-      std::cout << "qxs on id " << id << std::endl;
-      for (int i = 0; i < ft_array->Nx(); i++)
-	std::cout << ft_array->dx*i << " " ;
-      std::cout << std::endl;
-      
-      std::cout << "qys on id " << id << std::endl;
-      for (int i = 0; i < ft_array->Ny(); i++)
-	std::cout << qys[i] << " " ;
-      std::cout << std::endl;
-
-      std::cout << "qzs on id " << id << std::endl;
-      for (int i = 0; i < ft_array->Nz(); i++)
-	std::cout << qzs[i] << " " ;
-      std::cout << std::endl;
-	    
-
-    }
-    MPI_Barrier(comm);
-  }
   
   // I'm assuming that the complex array blocks will always be split in a certain
   // configuration (see logic in if statement on next line).
@@ -124,7 +119,6 @@ Conjugate::Conjugate(const MPI_Comm comm,const int mpi_size, const int id,
     
   }    
 
-
 }
 
 
@@ -135,14 +129,15 @@ void Conjugate::set_qs()
 
   const int local0start = ft_array->get_local0start();
 
-  const int globalNy = ft_array->boxgrid[1];
-  const int globalNz = ft_array->boxgrid[2];
+  const int globalNy = grid->ft_boxgrid[1];
+  const int globalNz = grid->ft_boxgrid[2];
 
-  const double dy = ft_array->dy;
-  const double dz = ft_array->dz;
+  const double dy = grid->dqy();
+  const double dz = grid->dqz();
   
+  qys.resize(localNy);
   qzs.resize(localNz);
-  qys.resize(localNy);  
+
 
   for (int i = 0; i < localNz; i++)
     if (i + local0start > globalNz/2) 
@@ -167,9 +162,9 @@ void Conjugate::update()
   const int localNx = ft_array->Nx();  
   const int local0start = ft_array->get_local0start();
   
-  const int globalNx = ft_array->boxgrid[0];
-  const int globalNy = ft_array->boxgrid[1];
-  const int globalNz = ft_array->boxgrid[2];
+  const int globalNx = grid->ft_boxgrid[0];
+  const int globalNy = grid->ft_boxgrid[1];
+  const int globalNz = grid->ft_boxgrid[2];
   
   
   

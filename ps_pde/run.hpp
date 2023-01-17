@@ -2,12 +2,12 @@
 #define RUN_HPP
 
 #include <vector>
-#include "globalparams.hpp"
-#include "solutionparams.hpp"
 
-void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
-	 std::vector<std::vector<double>> & X_is,
-	 std::vector<double> &,
-	 std::vector<double> & , std::vector<double> &);
+#include "grid.hpp"
+#include "conjugate_volfrac.hpp"
+#include "fixgrid_floryhuggins.hpp"
+
+void run(psPDE::Grid &,psPDE::ConjugateVolFrac &,
+	 psPDE::FixGridFloryHuggins &, double, int );
 
 #endif

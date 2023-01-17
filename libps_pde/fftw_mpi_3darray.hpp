@@ -6,8 +6,6 @@
 #include <string>
 #include <complex>
 
-#include "domain.hpp"
-
 namespace psPDE {
 
 template <typename T>
@@ -18,7 +16,7 @@ private:
   ptrdiff_t alloc_local, local_0_start;
 
   ptrdiff_t size;
-  const std::array<ptrdiff_t,3> boxgrid;
+
   std::array<ptrdiff_t,3> sizeax; // = {Nz,Ny,Nx} because for some stupid reason 12 months
   //                                  ago I thought x index should vary fastest
   
@@ -27,23 +25,21 @@ private:
   int spacer;
 
   MPI_Comm comm;
-
-  void set_subdomain(Domain &) const;
   
 public:
 
-  fftw_MPI_3Darray(const MPI_Comm &,std::string,
-		   ptrdiff_t, ptrdiff_t, ptrdiff_t, Domain & );
+  fftw_MPI_3Darray(MPI_Comm ,std::string,
+		   ptrdiff_t, ptrdiff_t, ptrdiff_t);
   fftw_MPI_3Darray(const fftw_MPI_3Darray<T> &,std::string name = "");
 
 
-  fftw_MPI_3Darray<std::complex<double>> make_fourier_transpose(Domain &) const;
-  fftw_MPI_3Darray<double> make_fourier_mod(Domain &) const;
+  void reverseFlat(int,  int &, int &, int &) const;
+
+
   
   ~fftw_MPI_3Darray();
 
 
-  const double dx,dy,dz;
 
   
   T* data() {
@@ -69,6 +65,7 @@ public:
   {
     return sizeax[2];
   }
+
 
   
   

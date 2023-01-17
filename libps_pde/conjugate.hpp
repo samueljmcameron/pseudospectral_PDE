@@ -5,9 +5,8 @@
 #include <complex>
 #include <vector>
 
-#include <mpi.h>
 
-#include "fftw_mpi_3darray.hpp"
+#include "grid.hpp"
 #include "smatrix.hpp"
 
 namespace psPDE {
@@ -15,19 +14,25 @@ class Conjugate
 {
 
 public:
- Conjugate(const MPI_Comm,const int , const int,
-	   fftw_MPI_3Darray<std::complex<double>> *);
+ Conjugate(Grid *);
 
+
+  virtual void reset_dt(double);
+  void setup();
   void update();
 
-private:
+  virtual void readCoeffs(const std::vector<std::string> &) = 0;
+
+
+protected:
   
   const MPI_Comm comm;
   const int id, mpi_size;
   const int nblocks;
 
-
-  const int localNy,localNz;
+  double dt;
+  
+  int localNy,localNz;
 
   // arrays for transferring via mpi
   std::vector<sMatrix<std::complex<double>>> blocks;
@@ -94,16 +99,15 @@ private:
   
 protected:
 
+
+  Grid *grid;
   fftw_MPI_3Darray<std::complex<double>> *ft_array;
 
   
   double complexprefactor, realprefactor, sqrtdt;
   
-  double qx,qy,qz,q2;
 
   std::vector<double> qys,qzs;
-
-
 
 
   

@@ -8,10 +8,10 @@ namespace psPDE {
 
 class ConjugateTrig : public Conjugate {
 public:
-  ConjugateTrig(const MPI_Comm,const int , const int,
-		    fftw_MPI_3Darray<std::complex<double>> *);
+  ConjugateTrig(Grid *);
 
   double x0,y0,z0;
+  
 private:
 
 

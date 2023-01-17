@@ -15,6 +15,7 @@ namespace ioVTK {
 
   //  template <ptrdiff_t NZ, ptrdiff_t NY, ptrdiff_t NX>
   void writeVTKImageData(std::string,const std::vector<ft_dub*>,
+			 const std::array<double,3> &,
 			 const std::array<double,3> &);
   void readVTKImageData(std::vector<ft_dub*>, std::string);
   

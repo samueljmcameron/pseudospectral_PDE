@@ -1,324 +1,91 @@
-#include <fstream>
-#include <chrono>
-#include <random>
-
-#include "fftw_mpi_3darray.hpp"
-#include "integrator.hpp"
-#include "conjplane.hpp"
-#include "randompll.hpp"
+#include <stdexcept>
 
 #include "iovtk.hpp"
-#include "timestep.hpp"
 #include "input.hpp"
-
 #include "run.hpp"
 
-void X_i_of_t(std::vector<double> & X_i,
-	      const std::vector<double> & dFdX_i,double dt,
-	      double radius, double viscosity,double temp,
-	      double randx, double randy, double randz,
-	      int noiseon)
+void run(psPDE::Grid &grid,psPDE::ConjugateVolFrac &conjvfrac,
+	 psPDE::FixGridFloryHuggins &fxgridFH, double dt, int Nsteps)
 {
-  double fric = 6*M_PI*viscosity*radius;
-  X_i[0] += -dt*dFdX_i[0]/fric + noiseon*sqrt(24*temp/fric*dt)*randx;
-  X_i[1] += -dt*dFdX_i[1]/fric + noiseon*sqrt(24*temp/fric*dt)*randy;
-  X_i[2] += -dt*dFdX_i[2]/fric + noiseon*sqrt(24*temp/fric*dt)*randz;
-  return;
-}
-
-
-void run(psPDE::GlobalParams gp, psPDE::SolutionParams solparams,
-	 psPDE::Atom *atoms) {
-
-
-  // construct all grid data necessary
-  psPDE::gridData grid(gp.comm,gp.Nx,gp.Ny,gp.Nz,gp.domain);
-
-  // set up inter-processor communication details
-  CommBrick commbrick(comm);
-  commbrick.setup(domain,Rcut);
-
-  LAMMPS::Neighbor neighbor;
-
-  neighbor.setup(domain,Rcut,skin);
-  
-
-
-  domain.pbc(*atoms);
-  commbrick.borders(*atoms);
-
-
-  neighbor.neigh_bin->bin_atoms(*atoms,0);
-  
-  double t = gp.starttime;
-
-  std::string prefix = gp.dump_file + std::string("_p") + std::to_string(gp.id) ;
-  std::string fname_p = prefix + std::string("_") +  std::to_string(gp.startstep) +  std::string(".vti");
-
-  std::string collection_name = prefix + std::string(".pvd");
-  
-  std::string complexprefix = gp.dump_file + std::string("_complex")
-    + std::string("_p") + std::to_string(gp.id) ;
-
-  std::string complexfname_p = complexprefix + std::string("_") +  std::to_string(gp.startstep) +  std::string(".vti");
-
-  std::string complexcollection_name = complexprefix + std::string(".pvd");
 
   
-  int running_average_count = 0;
-
-  std::ofstream myfile;
-
+  double t = 0;
+  int step = 0;
   
-  if (gp.restart_flag) {
+
+  std::string prefix = "vtkfiles/start200000_nucd_p%";
+
+  input::replacePercentages(prefix,grid.domain.me);
+
+  std::string fname = prefix + std::string("_") + std::to_string(0) + std::string(".vti");
+  std::string cname = prefix + std::string(".pvd");
+
+  if (grid.domain.me == 0)
+    std::cout << "Saving on step : 0" << std::endl;
+  psPDE::ioVTK::writeVTKcollectionHeader(cname);
+  psPDE::ioVTK::writeVTKImageData(fname,{grid.phi.get()},grid.domain.boxlo,
+				  {grid.dx(),grid.dy(),grid.dz()});
+
+  psPDE::ioVTK::writeVTKcollectionMiddle(cname,fname,t);
 
 
-    if (X_is.size() > 0) 
-      throw std::runtime_error("Cannot specify additional nucleation sites when "
-			       + std::string("restarting a file. Use read instead."));
+  int errflag = 0;
+  int totalerr;
+
+  for (int step = 1; step <= Nsteps; step++) {
 
 
-    psPDE::input::read_in_nuclei_properties(nucmaxs,radii,viscosities,gp.nucs_to_keep,
-					    true,gp.thermo_file,
-					    gp.comm,gp.id);
+    grid.nonlinear->setZero();
+    // flory huggins contribution
+    fxgridFH.compute(grid);
+
+
     
-    psPDE::input::put_in_vectors(X_is,gp.nucs_to_keep,gp.thermo_file,gp.comm,
-				 gp.id,gp.starttime);
+    // FFT phi(r,t) 
 
-    
-    psPDE::ioVTK::restartVTKcollection(collection_name,gp.comm);
-    psPDE::ioVTK::restartVTKcollection(complexcollection_name,gp.comm);
-    
-    psPDE::ioVTK::readVTKImageData({&phi},fname_p);
-    
-    for (int i = 0; i < modulus.Nz(); i++) {
-      for (int j = 0; j < modulus.Ny(); j++) {
-	for (int k = 0; k < modulus.Nx(); k++) {
-	  modulus(i,j,k) = 0.0;
-	}
-      }
+    fftw_execute(grid.forward_phi);
+    fftw_execute(grid.forward_nonlinear);
+
+
+    // compute phi(q,t+dt) 
+
+    conjvfrac.update();
+
+    // IFFT back to get phi(r,t+dt) 
+    fftw_execute(grid.backward_phi);
+
+    if (std::isnan((*grid.phi)(0,0,0) )) 
+      errflag = 1;
+
+    MPI_Allreduce(&errflag,&totalerr,1,MPI_INT,MPI_SUM,grid.comm);
+
+    if (totalerr) {
+      psPDE::ioVTK::writeVTKcollectionFooter(cname);
+      throw std::runtime_error("NAN encountered in phi.");
+
     }
+    
+    t += dt;
 
-    if (gp.id == 0) {
-      myfile.open(gp.thermo_file,std::ios::app);
+
+    if (step % 1000 == 0) {
+
+      if (grid.domain.me == 0)
+	std::cout << "Saving on step : " << step << std::endl;
+
       
-    }
-
-  } else {
-
-    psPDE::ioVTK::writeVTKcollectionHeader(collection_name);
-    psPDE::ioVTK::writeVTKcollectionHeader(complexcollection_name);
-
-
-    if (gp.read_flag) {
-      psPDE::ioVTK::readVTKImageData({&phi},gp.read_dump_file);
+      std::string fname = prefix + std::string("_") + std::to_string(step)
+	+ std::string(".vti");
+      psPDE::ioVTK::writeVTKImageData(fname,{grid.phi.get()},grid.domain.boxlo,
+				      {grid.dx(),grid.dy(),grid.dz()});
       
-      psPDE::input::read_in_nuclei_properties(nucmaxs,radii,viscosities,gp.nucs_to_keep,
-					      gp.all_nucs_flag,gp.read_thermo_file,
-					      gp.comm,gp.id);
-      
-      psPDE::input::put_in_vectors(X_is,gp.nucs_to_keep,gp.read_thermo_file,gp.comm,
-				   gp.id,gp.starttime);
+      psPDE::ioVTK::writeVTKcollectionMiddle(cname,fname,t);
 
-	
-    } else { 
-      integrator.initialize(phi,gp.volFrac,gp.variance);
     }
-
-    fftw_execute(forward_phi);
-    ft_phi.mod(modulus);
-
-    double norm = 1.0/(gp.Nz*gp.Ny*gp.Nx);
-    
-    for (int i = 0; i < ft_phi.Nz(); i++) {
-      for (int j = 0; j < ft_phi.Ny(); j++) {
-	for (int k = 0; k < ft_phi.Nx(); k++) {
-	  ft_phi(i,j,k) = ft_phi(i,j,k)*norm;
-	}
-      }
-    }
-    for (int i = 0; i < modulus.Nz(); i++) {
-      for (int j = 0; j < modulus.Ny(); j++) {
-	for (int k = 0; k < modulus.Nx(); k++) {
-	  modulus(i,j,k) = modulus(i,j,k)*norm;
-	}
-      }
-    }
-
-    
-    if (gp.id == 0) {
-      modulus(0,0,0) = 0.0;
-    }
-
-    fftw_execute(backward_phi);
-    
-    psPDE::ioVTK::writeVTKImageData(fname_p,{&phi},gp.realspace);
-    psPDE::ioVTK::writeVTKImageData(complexfname_p,{&modulus},modulus.grid);
-    
-    psPDE::ioVTK::writeVTKcollectionMiddle(collection_name,fname_p,t);
-    psPDE::ioVTK::writeVTKcollectionMiddle(complexcollection_name,complexfname_p,t);
-
-
-    
-    if (gp.id == 0) {
-      myfile.open(gp.thermo_file);
-
-      myfile << "# nucnum \t radius \t viscosity " << std::endl;
-      for (int index =  0; index < viscosities.size(); index++ ) {
-	myfile << "# " << index << " \t " << nucmaxs.at(index) << "\t" 
-	       << radii.at(index) << " \t " << viscosities.at(index) 
-	       << std::endl;
-      }
-      
-      
-      myfile << "# t ";
-      for (unsigned index = 0; index < X_is.size() ; index ++) {
-	myfile << "\t (X_" << index << ")_x " << "(X_" << index << ")_y"
-	       << "(X_" << index << ")_z";
-      }
-      myfile << "\t F(X) ";
-      for (unsigned index = 0; index < X_is.size() ; index ++) {
-	myfile << "\t (dF/dX_" << index << ")_x " << "(dF/dX_" << index << ")_y"
-	       << "(dF/dX_" << index << ")_z";
-      }
-      myfile << std::endl;
 
   }
 
-    
-  }
-
-  // class to get seeds from a single seed
-  psPDE::RandomPll rpll(gp.comm,gp.id,gp.seed,gp.mpi_size);
-  
-  psPDE::Integrator integrator(grid,rpll.get_processor_seed(),solparams,gp.dt);
-
-  // can use the global seed, as it is just used to generate seeds but not actually
-  //  used as a seed itself.
-  std::mt19937 dropgen(gp.seed);
-  std::uniform_real_distribution<double> real_dist(-0.5,0.5);
-  std::vector<std::vector<double>> free_energy_derivs;
-
-
-  
-  psPDE::TimeStep timestep(gp.comm,gp.mpi_size,gp.id,ft_phi.Nz(),
-			   ft_phi.Ny());
-
-  double free_energy;
-  for (int it = 1+gp.startstep; it <= gp.steps+gp.startstep; it ++) {
-
-
-
-    free_energy_derivs = integrator.nonlinear(nonlinear,phi,X_is,nucmaxs,free_energy); // compute nl(t) given phi(t)
-
-    if (gp.id == 0 && it % gp.thermo_every == 0) {
-      myfile << t;
-
-      for (unsigned index = 0; index < X_is.size() ; index ++) {
-
-	myfile << "\t " << X_is.at(index).at(0) << "\t "
-	       << X_is.at(index).at(1) << "\t "
-	       << X_is.at(index).at(2);
-      }
-
-      myfile << "\t " << free_energy;
-      for (unsigned index = 0; index < free_energy_derivs.size() ; index ++) {
-
-	myfile << "\t " << free_energy_derivs.at(index).at(0) << "\t "
-	       << free_energy_derivs.at(index).at(1) << "\t "
-	       << free_energy_derivs.at(index).at(2);
-      }
-      
-
-      myfile << std::endl;
-      
-    }
-
-    t += integrator.get_dt();
-
-    for (unsigned index = 0; index < X_is.size(); index ++ ) {
-      double randx = real_dist(dropgen);
-      double randy = real_dist(dropgen);
-      double randz = real_dist(dropgen);
-      X_i_of_t(X_is[index],free_energy_derivs[index],integrator.get_dt(),radii[index],
-	       viscosities[index],solparams.temp,randx,randy,randz,gp.X_i_noise);
-    }
-    
-    
-    fftw_execute(forward_phi);
-    fftw_execute(forward_nonlinear);
-
-    timestep.update(t,integrator);
-
-    
-    ft_phi.running_mod(modulus);
-    running_average_count += 1;
-
-
-    if (std::isnan(phi(0,0,0))) {
-
-      if (gp.id == 0) {
-	myfile.close();
-      }
-      
-      psPDE::ioVTK::writeVTKcollectionFooter(collection_name);
-      psPDE::ioVTK::writeVTKcollectionFooter(complexcollection_name);
-      throw std::runtime_error("Solution concentration diverged at t = " +
-			       std::to_string(t));
-      
-    }
-
-
-    if (it % gp.dump_every == 0) {
-      std::cout << "id " << gp.id << " saving at t = " << t << std::endl;
-      fname_p = prefix + std::string("_") +  std::to_string(it) +  std::string(".vti");
-      complexfname_p = complexprefix + std::string("_") +  std::to_string(it) +  std::string(".vti");
-      modulus /= running_average_count;
-      if (gp.id == 0) {
-	modulus(0,0,0) = 0.0;
-      }
-      
-      running_average_count = 0;
-
-      psPDE::ioVTK::writeVTKImageData(complexfname_p,{&modulus},modulus.grid);
-      psPDE::ioVTK::writeVTKcollectionMiddle(complexcollection_name,complexfname_p,t);
-      fftw_execute(backward_phi); // get phi(t+dt)
-
-      integrator.initialize(modulus,0,0);
-
-      psPDE::ioVTK::writeVTKImageData(fname_p,{&phi},phi.grid);
-      psPDE::ioVTK::writeVTKcollectionMiddle(collection_name,fname_p,t);
-    } else {
-      fftw_execute(backward_phi); // get phi(t+dt)
-    }
-
-
-
-  }
-
-  if (gp.id == 0) {
-    myfile.close();
-  }
-  
-  psPDE::ioVTK::writeVTKcollectionFooter(collection_name);
-  psPDE::ioVTK::writeVTKcollectionFooter(complexcollection_name);
-  
-  fftw_destroy_plan(forward_phi);
-  fftw_destroy_plan(backward_phi);
-  fftw_destroy_plan(forward_nonlinear);
-  fftw_destroy_plan(backward_nonlinear);
-
-
-  const double tot_integral = tt_integral/chronoitvl;
-  const double tot_freeenergy = tt_freeenergy/chronoitvl;
-
-  std::cout << "total integration time on process " << gp.id << " is " << tot_integral
-	    << std::endl;
-
-  std::cout << "total free energy time on process " << gp.id << " is " << tot_freeenergy
-	    << std::endl;
-
-  
+  psPDE::ioVTK::writeVTKcollectionFooter(cname);
 
   return;
 }

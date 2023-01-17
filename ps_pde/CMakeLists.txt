@@ -1,5 +1,5 @@
 
-add_executable(ps_pde-bin main.cpp run.cpp)
+add_executable(ps_pde-bin main.cpp run.cpp input.cpp)
 
 target_link_libraries(ps_pde-bin PRIVATE MPI::MPI_CXX PkgConfig::FFTW ${FFTW_MPI_LIB} ps_pde)
 
