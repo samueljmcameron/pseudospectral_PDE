@@ -24,11 +24,10 @@ private:
   std::string array_name;
   int spacer;
 
-  MPI_Comm comm;
   
 public:
 
-  fftw_MPI_3Darray(MPI_Comm ,std::string,
+  fftw_MPI_3Darray(const MPI_Comm &,std::string,
 		   ptrdiff_t, ptrdiff_t, ptrdiff_t);
   fftw_MPI_3Darray(const fftw_MPI_3Darray<T> &,std::string name = "");
 
@@ -107,7 +106,6 @@ public:
     swap(first.sizeax,second.sizeax);
     swap(first.array_name,second.array_name);
     swap(first.spacer,second.spacer);
-    swap(first.comm,second.comm);
 
     return;
 

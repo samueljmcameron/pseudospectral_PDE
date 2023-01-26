@@ -3,8 +3,8 @@
 
 #include <string>
 #include <memory>
+#include <array>
 
-#include "domain.hpp"
 #include "fftw_mpi_3darray.hpp"
 #include <fftw3-mpi.h>
 
@@ -13,7 +13,7 @@ class Grid {
 public:
 
   
-  Grid(const std::vector<std::string> &,MPI_Comm );
+  Grid(const std::vector<std::string> &,const MPI_Comm &);
 
   ~Grid();
 
@@ -21,7 +21,7 @@ public:
   std::array<ptrdiff_t,3> boxgrid; // global number of grid points {Nx,Ny,Nz}
   std::array<ptrdiff_t,3> ft_boxgrid; // global number of grid points {Nx,Ny,Nz}
   
-  const MPI_Comm comm;
+  const MPI_Comm &comm;
 
   std::unique_ptr<psPDE::fftw_MPI_3Darray<double>> phi;
   std::unique_ptr<psPDE::fftw_MPI_3Darray<double>> nonlinear;
@@ -41,6 +41,8 @@ public:
   
   
   void populate(const std::vector<std::string> &);
+
+
   
 
 
@@ -51,8 +53,7 @@ private:
   void create_noise(int, int, int);
   void constant_phi(double, double, int);
   void constant_noise(double,double,int);
-
-  void set_real_subdomain();
+  
 };
 
 }

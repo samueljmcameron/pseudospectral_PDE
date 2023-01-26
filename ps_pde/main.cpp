@@ -14,6 +14,7 @@
 #include "domain.hpp"
 #include "conjugate_volfrac.hpp"
 #include "fixgrid_floryhuggins.hpp"
+#include "randompll.hpp"
 
 int main(int argc, char **argv)
 {
@@ -155,6 +156,7 @@ int main(int argc, char **argv)
       
     }
 
+    input::replace_with_new_seed(v_line,"grid populate",id,mpi_size,comm);
     grid.populate(v_line);
 
     psPDE::ConjugateVolFrac conjvfrac(domain,grid);
@@ -186,6 +188,8 @@ int main(int argc, char **argv)
       break;
     }
 
+    input::replace_with_new_seed(v_line,"conjugate/volfrac",id,mpi_size,comm);
+    
     conjvfrac.readCoeffs(v_line);
 
     psPDE::FixGridFloryHuggins fxgridFH;

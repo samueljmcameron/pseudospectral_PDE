@@ -5,7 +5,7 @@
 #include <complex>
 #include <vector>
 
-
+#include "domain.hpp"
 #include "grid.hpp"
 #include "smatrix.hpp"
 
@@ -30,7 +30,7 @@ private:
 
 protected:
   
-  const MPI_Comm comm;
+  const MPI_Comm &comm;
   const int id, mpi_size;
   
   Domain &domain;

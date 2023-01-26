@@ -2,8 +2,8 @@
 
 using namespace psPDE;
 
-RandomPll::RandomPll(MPI_Comm comm, const int id, const int seed, const int numprocs)
-  : seed(seed),id(id),comm(comm), integer_dist(), processor_seeds(numprocs)
+RandomPll::RandomPll(const MPI_Comm &comm, const int id, const int seed, const int numprocs)
+  : seed(seed),id(id), integer_dist(), processor_seeds(numprocs)
 {
 
   gen.seed(seed);

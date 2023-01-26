@@ -12,11 +12,11 @@ void run(psPDE::Domain &domain,psPDE::Grid &grid,psPDE::ConjugateVolFrac &conjvf
   double t = 0;
   int step = 0;
 
-  double dx = domain.period[0]/grid.boxgrid[0];
-  double dy = domain.period[1]/grid.boxgrid[1];
-  double dz = domain.period[2]/grid.boxgrid[2];
-
-  std::string prefix = "vtkfiles/start200000_nucd_p%";
+  const double dx = domain.period[0]/grid.boxgrid[0];
+  const double dy = domain.period[1]/grid.boxgrid[1];
+  const double dz = domain.period[2]/grid.boxgrid[2];
+  
+  std::string prefix = "vtkfiles/start300000_nucd_p%";
 
   input::replacePercentages(prefix,domain.me);
 

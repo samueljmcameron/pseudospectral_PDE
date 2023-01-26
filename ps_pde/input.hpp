@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 #include <map>
-
+#include <mpi.h>
 
 namespace input {
   std::vector<std::string> split_line(std::string&);
@@ -13,6 +13,8 @@ namespace input {
   void convertVariables(std::string &,
 			std::map<std::string, std::string> const&);
 
-  
+  void replace_with_new_seed(std::vector<std::string> &,
+			     const std::string &,int,int,
+			     MPI_Comm )  ;
 };
 #endif

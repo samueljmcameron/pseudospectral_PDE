@@ -12,10 +12,6 @@ Domain::Domain(int id,int mpi_size,double _xprd, double _yprd,double _zprd,
     boxhi{_xlo+_xprd,_ylo+_yprd,_zlo+_zprd},me(id),nprocs(mpi_size)
 {
 
-  // initially just set subdomains to be same as domains
-
-  sublo = boxlo;
-  subhi = boxhi;
   
 };
 
@@ -69,27 +65,8 @@ Domain::Domain(int id, int mpi_size,const std::vector<std::string> &v_line)
   for (int i = 0; i < 3; i++)  
     boxhi[i] = boxlo[i] + period[i];
 
-  sublo = boxlo;
-  subhi = boxhi;
   
 };
 
 
 
-void Domain::partition(const Grid *grid)
-{
-
-  double dz = period[2]/grid->boxgrid[2];
-  
-  if (grid->phi) {
-    sublo[0] = boxlo[0];
-    sublo[1] = boxlo[1];
-    sublo[2] = dz*grid->phi->get_local0start() + boxlo[2];
-    
-    subhi[0] = boxhi[0];
-    subhi[1] = boxhi[1];
-    subhi[2] = dz*(grid->phi->get_local0start()+grid->phi->Nz()) + boxlo[2];
-  } else
-    throw std::runtime_error("Cannot create subdomains (incompatible grid style).");
-  return;
-}

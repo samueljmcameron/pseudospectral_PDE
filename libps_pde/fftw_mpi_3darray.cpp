@@ -5,9 +5,8 @@ using namespace psPDE;
 
 
 template <typename T>
-fftw_MPI_3Darray<T>::fftw_MPI_3Darray(MPI_Comm comm,std::string name,
+fftw_MPI_3Darray<T>::fftw_MPI_3Darray(const MPI_Comm &comm,std::string name,
 				      ptrdiff_t iNx, ptrdiff_t iNy, ptrdiff_t iNz)
-  : comm(comm)
 /*
   Constructor for a 3D array with axis sizes (iNz,iNy,iNx) (the x dimension
   varies the quickest). The array is not contiguous in memory for different
@@ -61,7 +60,7 @@ template <typename T>
 fftw_MPI_3Darray<T>::fftw_MPI_3Darray(const fftw_MPI_3Darray<T> & base,
 				      std::string name)
   : alloc_local(base.alloc_local),local_0_start(base.local_0_start),
-    size(base.size),array_name(base.array_name), spacer(base.spacer),comm(base.comm)
+    size(base.size),array_name(base.array_name), spacer(base.spacer)
 /*
   Copy array, but if name (other than "") is provided then only make an
   array of the same size with the new name, but don't copy the elements in the

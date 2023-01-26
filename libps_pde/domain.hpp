@@ -15,7 +15,6 @@ public:
 
   const int me,nprocs;
   std::array<double,3> period,boxlo,boxhi;
-  std::array<double,3> sublo,subhi;
 
 
   void partition(const Grid *);

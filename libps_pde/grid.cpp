@@ -8,7 +8,7 @@
 using namespace psPDE;
 
 
-Grid::Grid(const std::vector<std::string> &v_line,MPI_Comm comm)
+Grid::Grid(const std::vector<std::string> &v_line,const MPI_Comm &comm)
   : comm(comm),phi(nullptr),nonlinear(nullptr),
     ft_phi(nullptr),ft_nonlinear(nullptr),ft_noise(nullptr)
     
@@ -67,6 +67,8 @@ void Grid::populate(const std::vector<std::string> &v_line)
 */
 {
 
+
+
   
   if (v_line[0] == "constant") {
     
@@ -98,16 +100,19 @@ void Grid::populate(const std::vector<std::string> &v_line)
       try {
 	ioVTK::readVTKImageData({phi.get()},v_line[2]);
       } catch (std::runtime_error &err) {
+	std::cout << err.what() << std::endl;
 	throw std::invalid_argument("invalid grid_setup populateialization file.");
       }
     } else {
       throw std::invalid_argument("Bad arguments for grid_setup.");
     }
+  } else {
+    throw std::invalid_argument("Bad arguments for grid_setup.");
   }
 
-
-
 }
+
+
 
 void Grid::create_concentration(int Nx, int Ny, int Nz)
 {

@@ -1,5 +1,4 @@
 
-#include "randompll.hpp"
 #include "conjugate_volfrac.hpp"
 
 #include <cmath>
@@ -50,10 +49,6 @@ void ConjugateVolFrac::readCoeffs(const std::vector<std::string> &v_line)
       iarg += 2;
     } else if (v_line[iarg] == "seed") {
       seed = std::stod(v_line[iarg+1]);
-      
-      RandomPll rpll(comm,id,seed,mpi_size);
-      
-      seed = rpll.get_processor_seed();
       iarg += 2;
       seed_flag = true;
       
@@ -79,9 +74,6 @@ void ConjugateVolFrac::reset_dt(double timestep)
 
   normalization = 1.0/(grid.ft_boxgrid[0]*grid.ft_boxgrid[1]*grid.ft_boxgrid[2]);
 
-
-
-  std::cout << "mobility = " << mobility << std::endl;
 
   complexprefactor = sqrt(12*temp*mobility*invLcubed);
   realprefactor = sqrt(24*temp*mobility*invLcubed);

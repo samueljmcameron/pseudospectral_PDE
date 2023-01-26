@@ -23,7 +23,7 @@ namespace ioVTK {
   void writeVTKcollectionMiddle(const std::string,
 				const std::string, const double);
   void writeVTKcollectionFooter(const std::string);
-  void restartVTKcollection(const std::string, const MPI_Comm );
+  void restartVTKcollection(const std::string, const MPI_Comm &);
 
   
 }

@@ -169,7 +169,7 @@ void ioVTK::writeVTKcollectionFooter(const std::string fname)
   myfile.close();
 }
 
-void ioVTK::restartVTKcollection(const std::string fname, const MPI_Comm comm)
+void ioVTK::restartVTKcollection(const std::string fname, const MPI_Comm &comm)
 /* restart the collection by copying the current file (up to the collection
    end) into a new file called "restart" + oldfname. */
    
