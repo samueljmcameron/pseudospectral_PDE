@@ -2,13 +2,13 @@
 #include <cmath>
 #include <stdexcept>
 
-
+#define SMALL 1e-3
 using namespace psPDE;
 
 void FixGridFloryHuggins::readCoeffs(const std::vector<std::string> &v_line)
 {
 
-
+  num_less_zero = num_great_zero = 0;
   temp = volFH = chi = 1;
 
   int iarg = 0;
@@ -42,9 +42,17 @@ void FixGridFloryHuggins::compute(Grid &grid)
   
   for (int i = 0; i < nonlinear.Nz(); i++) 
     for (int j = 0; j < nonlinear.Ny(); j++)
-      for (int k = 0; k < nonlinear.Nx(); k++)
+      for (int k = 0; k < nonlinear.Nx(); k++) {
+	if (phi(i,j,k) <= 0 ) {
+	  phi(i,j,k) = -phi(i,j,k);
+	  num_less_zero += 1;
+	} else if (phi(i,j,k) >= 1) {
+	  phi(i,j,k) = 1-(phi(i,j,k)-1);
+	  num_great_zero += 1;
+	}
 	nonlinear(i,j,k) 
 	  += temp/volFH*(log(phi(i,j,k)/(1-phi(i,j,k)))+chi*(1-2*phi(i,j,k)));
+      }
 
   return;
 

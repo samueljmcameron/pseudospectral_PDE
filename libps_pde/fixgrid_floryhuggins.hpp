@@ -13,8 +13,10 @@ class FixGridFloryHuggins {
 public:
   void readCoeffs(const std::vector<std::string> &);
   void compute(Grid &);
+  int num_less_zero,num_great_zero;
 private:
   double temp,volFH,chi;
+
 };
 
 }
