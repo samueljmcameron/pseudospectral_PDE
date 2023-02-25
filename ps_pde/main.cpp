@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cstring>
 #include <fstream>
+#include <algorithm>
 
 #include <fftw3-mpi.h>
 
@@ -151,12 +152,21 @@ int main(int argc, char **argv)
       }
       
       v_line.erase(v_line.begin());
+
+
+      if (v_line.at(0) == "constant") {
+	int tmpseed = std::stoi(v_line.at(4));
+	tmpseed = input::replace_with_new_seed(tmpseed,comm,id,mpi_size);
+	v_line.at(4) = std::to_string(tmpseed);
+      }
+      for (auto & word : v_line)
+	std::cout << word << " ";
+      std::cout << std::endl;
       
       break;
       
     }
-
-    input::replace_with_new_seed(v_line,"grid populate",id,mpi_size,comm);
+    
     grid.populate(v_line);
 
     psPDE::ConjugateVolFrac conjvfrac(domain,grid);
@@ -183,12 +193,29 @@ int main(int argc, char **argv)
 	MPI_Abort(comm,1);
 	return EXIT_FAILURE;
       }
+
+
+
+      
       v_line.erase(v_line.begin());
 
+
+      auto pos = std::find(v_line.begin(),v_line.end(),"seed");
+
+      if (pos != v_line.end()) {
+	auto index = std::distance(v_line.begin(),pos) + 1;
+
+	int tmpseed = std::stoi(v_line.at(index));
+	tmpseed = input::replace_with_new_seed(tmpseed,comm,id,mpi_size);
+	v_line.at(index) = std::to_string(tmpseed);
+      }
+
+      for (auto & word : v_line)
+	std::cout << word << " ";
+      std::cout << std::endl;
       break;
     }
 
-    input::replace_with_new_seed(v_line,"conjugate/volfrac",id,mpi_size,comm);
     
     conjvfrac.readCoeffs(v_line);
 

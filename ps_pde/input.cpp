@@ -136,28 +136,28 @@ void input::convertVariables(std::string &raw,
 /* given a vector like {"alpha", "beta", "seed", "8492109"}, generate
    a new seed from "8492109" which is unique to the current MPI process.*/
 
-void input::replace_with_new_seed(std::vector<std::string> &v_line,
-				  const std::string& specifier,int id, int mpi_size,
-				  MPI_Comm comm)
+int input::replace_with_new_seed(int baseseed,const MPI_Comm &comm,
+				  int id, int nprocs)
 {
 
-  auto it = std::find(v_line.begin(),v_line.end(),"seed");
-
-  if (it == v_line.end())
-    throw std::runtime_error("No seed variable present in " + specifier + std::string("."));
-
-  it ++;
-
-  if (it == v_line.end())
-    throw std::runtime_error("Invalid seed argument in " + specifier + std::string("."));
 
 
-  int seed = std::stod(*it);
+  std::mt19937 gen;
+  std::uniform_int_distribution<int> integer_dist;
 
-  psPDE::RandomPll rpll(comm,id,seed,mpi_size);
+  std::vector<int> processor_seeds(nprocs);
 
-  int newseed = rpll.get_processor_seed();
+  
+  gen.seed(baseseed);
 
-  *it = std::to_string(newseed);
+  if (id == 0) {
+    for (auto & num : processor_seeds)
+      num = integer_dist(gen);
+  }
+
+  MPI_Bcast(processor_seeds.data(),nprocs,MPI_INT,0,comm);
+
+
+  return processor_seeds.at(id);
 
 }

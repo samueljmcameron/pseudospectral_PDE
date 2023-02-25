@@ -13,8 +13,6 @@ namespace input {
   void convertVariables(std::string &,
 			std::map<std::string, std::string> const&);
 
-  void replace_with_new_seed(std::vector<std::string> &,
-			     const std::string &,int,int,
-			     MPI_Comm )  ;
+  int replace_with_new_seed(int, const MPI_Comm&,int,int )  ;
 };
 #endif

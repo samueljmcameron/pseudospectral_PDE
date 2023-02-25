@@ -16,7 +16,7 @@ void run(psPDE::Domain &domain,psPDE::Grid &grid,psPDE::ConjugateVolFrac &conjvf
   const double dy = domain.period[1]/grid.boxgrid[1];
   const double dz = domain.period[2]/grid.boxgrid[2];
   
-  std::string prefix = "vtkfiles/start300000_nucd_p%";
+  std::string prefix = "vtkfiles/unstable_p%";
 
   input::replacePercentages(prefix,domain.me);
 
