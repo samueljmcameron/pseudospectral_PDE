@@ -19,9 +19,7 @@ private:
 
   std::uniform_real_distribution<double> real_dist;
 
-  double normalization;
-
-  double mobility,temp,volFH,gamma;
+  double mobility,temp;
 
   bool seed_flag;
   
@@ -29,7 +27,7 @@ private:
   virtual void complex_update(int,int,int) override;
   virtual void real_update(int,int,int) override;
   virtual void origin_update() override;
-
+  virtual void reset_dt() override;
 };
 
 }
