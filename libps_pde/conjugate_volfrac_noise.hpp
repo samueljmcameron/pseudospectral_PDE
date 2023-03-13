@@ -11,7 +11,9 @@ namespace psPDE {
 class ConjugateVolFracNoise : public Conjugate {
 public:
   ConjugateVolFracNoise(Domain &,Grid &);
-  
+  virtual void readCoeffs(const std::vector<std::string> &) override;
+
+  virtual void reset_dt(double) override;  
 private:
 
 
@@ -20,14 +22,14 @@ private:
   std::uniform_real_distribution<double> real_dist;
 
   double mobility,temp;
-
+  int seed;
   bool seed_flag;
   
   
   virtual void complex_update(int,int,int) override;
   virtual void real_update(int,int,int) override;
   virtual void origin_update() override;
-  virtual void reset_dt() override;
+
 };
 
 }
