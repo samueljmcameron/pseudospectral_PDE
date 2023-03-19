@@ -80,7 +80,7 @@ void ioVTK::writeVTKImageData(std::string fname,
 
   for (unsigned i = 0; i < scalar_outputs.size(); i++) {
     
-    int offset = i*(Nx0*Ny0*Nz0+sizeof(bytelength));
+    int offset = i*(sizeof(double)*Nx0*Ny0*Nz0+sizeof(bytelength));
     
     myfile << "<DataArray Name=\"" << scalar_outputs[i]->get_name()
 	   << "\" type=\"Float64\" format=\"appended\" "

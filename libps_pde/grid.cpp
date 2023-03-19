@@ -95,10 +95,10 @@ void Grid::populate(const std::vector<std::string> &v_line)
     if (v_line.size() != 3)
       throw std::invalid_argument("Bad arguments (reading in data) for grid_populate.");
 
-    if (v_line[1] == "concentration" && phi) {
+    if (v_line[1] == "concentration" && phi && nonlinear) {
     
       try {
-	ioVTK::readVTKImageData({phi.get()},v_line[2]);
+	ioVTK::readVTKImageData({nonlinear.get(),phi.get()},v_line[2]);
       } catch (std::runtime_error &err) {
 	std::cout << err.what() << std::endl;
 	throw std::invalid_argument("invalid grid_setup populateialization file.");
