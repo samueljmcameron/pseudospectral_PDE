@@ -38,7 +38,7 @@ private:
   std::complex<double> noise;
 
   fftw_MPI_3Darray<std::complex<double>> &ft_phi;
-  fftw_MPI_3Darray<std::complex<double>> &ft_nonlinear;
+  fftw_MPI_3Darray<std::complex<double>> &ft_chempot;
 
 
   

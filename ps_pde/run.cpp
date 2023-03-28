@@ -38,7 +38,7 @@ void run(psPDE::Domain &domain,psPDE::Grid &grid,psPDE::ConjugateVolFrac &conjvf
   for (int step = 1; step <= Nsteps; step++) {
 
 
-    grid.nonlinear->setZero();
+    grid.chempot->setZero();
     // flory huggins contribution
     fxgridFH.compute(grid);
 
@@ -47,7 +47,7 @@ void run(psPDE::Domain &domain,psPDE::Grid &grid,psPDE::ConjugateVolFrac &conjvf
     // FFT phi(r,t) 
 
     fftw_execute(grid.forward_phi);
-    fftw_execute(grid.forward_nonlinear);
+    fftw_execute(grid.forward_chempot);
 
 
     // compute phi(q,t+dt) 

@@ -8,10 +8,10 @@ using namespace psPDE;
 
 ConjugateVolFrac::ConjugateVolFrac(Domain &domain_o,Grid &grid_o)
   : Conjugate(domain_o,grid_o),ft_phi(*(grid.ft_phi)),
-    ft_nonlinear(*(grid.ft_nonlinear)),real_dist(-0.5,0.5)
+    ft_chempot(*(grid.ft_chempot)),real_dist(-0.5,0.5)
 {
 
-  if (!grid.ft_phi || !grid.ft_nonlinear)
+  if (!grid.ft_phi || !grid.ft_chempot)
     throw std::runtime_error("Calling conjugate/volfrac on grid that "
 			     "doesn't have concentration grid_style.");
 
@@ -102,7 +102,7 @@ void ConjugateVolFrac::complex_update(int i , int j, int k)
   noise.imag(complexprefactor*sqrt(q2)*sqrtdt*real_dist(gen));
 
   ft_phi(i,j,k)
-    = (ft_phi(i,j,k)-mobility*q2*dt*(ft_nonlinear(i,j,k)
+    = (ft_phi(i,j,k)-mobility*q2*dt*(ft_chempot(i,j,k)
 				     +temp/volFH*gamma*q2*ft_phi(i,j,k))
        )*normalization + noise;
   
@@ -126,7 +126,7 @@ void ConjugateVolFrac::real_update(int i, int j, int k)
   noise = realprefactor*sqrt(q2)*sqrtdt*real_dist(gen);
   
   ft_phi(i,j,k)
-    = (ft_phi(i,j,k)-mobility*q2*dt*(ft_nonlinear(i,j,k)
+    = (ft_phi(i,j,k)-mobility*q2*dt*(ft_chempot(i,j,k)
 				     +temp/volFH*gamma*q2*ft_phi(i,j,k))
        )*normalization + noise;
   

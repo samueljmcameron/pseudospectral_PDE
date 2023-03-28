@@ -37,12 +37,12 @@ void FixGridFloryHuggins::compute(Grid &grid)
 {
 
   fftw_MPI_3Darray<double> &phi = *(grid.phi);
-  fftw_MPI_3Darray<double> &nonlinear = *(grid.nonlinear);
+  fftw_MPI_3Darray<double> &chempot = *(grid.chempot);
   
   
-  for (int i = 0; i < nonlinear.Nz(); i++) 
-    for (int j = 0; j < nonlinear.Ny(); j++)
-      for (int k = 0; k < nonlinear.Nx(); k++) {
+  for (int i = 0; i < chempot.Nz(); i++) 
+    for (int j = 0; j < chempot.Ny(); j++)
+      for (int k = 0; k < chempot.Nx(); k++) {
 	if (phi(i,j,k) <= 0 ) {
 	  phi(i,j,k) = -phi(i,j,k);
 	  num_less_zero += 1;
@@ -50,7 +50,7 @@ void FixGridFloryHuggins::compute(Grid &grid)
 	  phi(i,j,k) = 1-(phi(i,j,k)-1);
 	  num_great_zero += 1;
 	}
-	nonlinear(i,j,k) 
+	chempot(i,j,k) 
 	  += temp/volFH*(log(phi(i,j,k)/(1-phi(i,j,k)))+chi*(1-2*phi(i,j,k)));
       }
 
